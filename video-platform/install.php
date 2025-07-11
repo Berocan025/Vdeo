@@ -52,6 +52,31 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             }
         }
         
+        // Ekstra kritik tabloları kontrol et ve oluştur
+        $critical_tables = [
+            "CREATE TABLE IF NOT EXISTS `slider` (
+                `id` int(11) NOT NULL AUTO_INCREMENT,
+                `baslik` varchar(255) NOT NULL,
+                `aciklama` text,
+                `resim` varchar(255) NOT NULL,
+                `link` varchar(255) DEFAULT NULL,
+                `buton_metni` varchar(50) DEFAULT NULL,
+                `siralama` int(11) NOT NULL DEFAULT '0',
+                `durum` enum('aktif','pasif') NOT NULL DEFAULT 'aktif',
+                `olusturma_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `guncelleme_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (`id`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        ];
+        
+        foreach ($critical_tables as $table_sql) {
+            try {
+                $pdo->exec($table_sql);
+            } catch (PDOException $e) {
+                error_log("Critical table creation error: " . $e->getMessage());
+            }
+        }
+        
         // Manuel olarak temel tabloları oluştur (yedek plan)
         $core_tables = "
         CREATE TABLE IF NOT EXISTS `admin_kullanicilar` (
@@ -59,8 +84,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             `ad` varchar(50) NOT NULL,
             `soyad` varchar(50) NOT NULL,
             `email` varchar(100) NOT NULL,
+            `kullanici_adi` varchar(100) NOT NULL,
             `sifre` varchar(255) NOT NULL,
+            `rol` enum('admin','super_admin') NOT NULL DEFAULT 'admin',
             `yetki_seviyesi` enum('super_admin','admin','moderator') NOT NULL DEFAULT 'admin',
+            `avatar` varchar(255) DEFAULT NULL,
             `profil_resmi` varchar(255) DEFAULT NULL,
             `durum` enum('aktif','pasif') NOT NULL DEFAULT 'aktif',
             `son_giris_tarihi` timestamp NULL DEFAULT NULL,
@@ -68,7 +96,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             `olusturma_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
             `guncelleme_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY (`id`),
-            UNIQUE KEY `email` (`email`)
+            UNIQUE KEY `email` (`email`),
+            UNIQUE KEY `kullanici_adi` (`kullanici_adi`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
         CREATE TABLE IF NOT EXISTS `site_ayarlari` (
@@ -148,6 +177,28 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             KEY `kategori_id` (`kategori_id`),
             FOREIGN KEY (`kategori_id`) REFERENCES `kategoriler` (`id`) ON DELETE SET NULL
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        
+        CREATE TABLE IF NOT EXISTS `slider` (
+            `id` int(11) NOT NULL AUTO_INCREMENT,
+            `baslik` varchar(255) NOT NULL,
+            `aciklama` text,
+            `resim` varchar(255) NOT NULL,
+            `mobil_resim` varchar(255) DEFAULT NULL,
+            `link` varchar(255) DEFAULT NULL,
+            `buton_metni` varchar(100) DEFAULT 'İzle',
+            `video_id` int(11) DEFAULT NULL,
+            `siralama` int(11) DEFAULT '0',
+            `durum` enum('aktif','pasif') DEFAULT 'aktif',
+            `baslangic_tarihi` timestamp NULL DEFAULT NULL,
+            `bitis_tarihi` timestamp NULL DEFAULT NULL,
+            `click_sayisi` int(11) DEFAULT '0',
+            `olusturma_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            `guncelleme_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (`id`),
+            KEY `video_id` (`video_id`),
+            KEY `durum` (`durum`),
+            KEY `siralama` (`siralama`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         ";
         
         // Temel tabloları oluştur
@@ -170,8 +221,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         
         // Önce yeni tablo yapısını dene (admin_kullanicilar)
         try {
-            $stmt = $pdo->prepare("INSERT INTO admin_kullanicilar (ad, soyad, email, sifre, yetki_seviyesi) VALUES (?, ?, ?, ?, 'super_admin')");
-            $stmt->execute(['DOBİEN', 'Admin', $admin_email, $admin_sifre_hash]);
+            $stmt = $pdo->prepare("INSERT INTO admin_kullanicilar (ad, soyad, email, kullanici_adi, sifre, rol, yetki_seviyesi) VALUES (?, ?, ?, ?, ?, 'super_admin', 'super_admin')");
+            $stmt->execute(['DOBİEN', 'Admin', $admin_email, $admin_kullanici, $admin_sifre_hash]);
             $admin_inserted = true;
         } catch (PDOException $e) {
             // Yeni tablo yoksa eski tabloyu dene (adminler)
@@ -236,30 +287,61 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             }
         }
 
-        // Config dosyası oluştur
+        // Config dosyası oluştur - Tam entegrasyon
         $config_content = "<?php
 /**
- * DOBİEN Video Platform - Veritabanı Ayarları
+ * DOBİEN Video Platform - Ana Config Dosyası
  * Geliştirici: DOBİEN
+ * Veritabanı ve Site Ayarları
+ * Tüm Hakları Saklıdır © DOBİEN
  */
 
+// Güvenlik kontrolü
+if (!defined('ABSPATH')) {
+    define('ABSPATH', dirname(__FILE__) . '/../');
+}
+
+// Veritabanı Ayarları
 define('DB_HOST', '$veritabani_host');
 define('DB_NAME', '$veritabani_adi');
 define('DB_USER', '$veritabani_kullanici');
 define('DB_PASS', '$veritabani_sifre');
+define('DB_CHARSET', 'utf8mb4');
 
+// Site Ayarları
 define('SITE_URL', '$site_url');
 define('SITE_NAME', '$site_adi');
+define('SITE_VERSION', '1.0.0');
 
-// Güvenlik anahtarı
-define('SECURITY_KEY', '" . bin2hex(random_bytes(32)) . "');
+// Dosya Yolları
+define('UPLOADS_PATH', ABSPATH . 'uploads/');
+define('ASSETS_PATH', ABSPATH . 'assets/');
+define('INCLUDES_PATH', ABSPATH . 'includes/');
 
-// Dosya yükleme ayarları
-define('UPLOAD_PATH', 'uploads/');
+// Güvenlik Anahtarları
+define('SALT_KEY', '" . bin2hex(random_bytes(32)) . "');
+define('AUTH_KEY', '" . bin2hex(random_bytes(32)) . "');
+define('SECURE_AUTH_KEY', '" . bin2hex(random_bytes(32)) . "');
+
+// Dosya Upload Ayarları
 define('MAX_FILE_SIZE', 500 * 1024 * 1024); // 500MB
+define('ALLOWED_VIDEO_FORMATS', 'mp4,avi,mov,wmv,flv');
+define('ALLOWED_IMAGE_FORMATS', 'jpg,jpeg,png,gif,webp');
 
-// Geliştirici bilgisi
-define('DEVELOPER', 'DOBİEN');
+// Cache ve Performans
+define('CACHE_ENABLED', true);
+define('CACHE_TIME', 3600);
+
+// Zaman Dilimi
+date_default_timezone_set('Europe/Istanbul');
+
+// Session ayarları PHP.ini'de yapılmalı (ini_set session aktifken çalışmaz)
+
+// Bellek ve upload limitleri
+ini_set('memory_limit', '256M');
+ini_set('upload_max_filesize', '500M');
+ini_set('post_max_size', '500M');
+ini_set('max_execution_time', 300);
 
 ?>";
 

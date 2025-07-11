@@ -23,16 +23,20 @@ if (!isset($_SESSION['admin_id']) || $_SESSION['admin_logged_in'] !== true) {
     exit;
 }
 
-// Tablo varlık kontrolü
-$missing_tables = checkAdminTables();
-if ($missing_tables !== true) {
-    die('
-    <div style="font-family: Arial; background: #1a1f2e; color: #fff; padding: 50px; text-align: center;">
-        <h2>⚠️ Veritabanı Hatası</h2>
-        <p>Gerekli tablolar eksik: <strong>' . implode(', ', $missing_tables) . '</strong></p>
-        <p><a href="../install.php" style="color: #ff6b35;">Kurulumu Tekrar Çalıştırın</a></p>
-    </div>
-    ');
+// Tablo varlık kontrolü - Daha güvenli hata yakalama
+try {
+    $missing_tables = checkAdminTables();
+    if ($missing_tables !== true && is_array($missing_tables)) {
+        die('
+        <div style="font-family: Arial; background: #1a1f2e; color: #fff; padding: 50px; text-align: center;">
+            <h2>⚠️ Veritabanı Hatası</h2>
+            <p>Gerekli tablolar eksik: <strong>' . implode(', ', $missing_tables) . '</strong></p>
+            <p><a href="../install.php" style="color: #ff6b35;">Kurulumu Tekrar Çalıştırın</a></p>
+        </div>
+        ');
+    }
+} catch (Exception $e) {
+    // Tablo kontrolünde hata varsa devam et, kritik olmayan
 }
 
 // Admin bilgilerini al - hem yeni hem eski tablo yapısını destekle
@@ -64,18 +68,24 @@ if (!$admin_user || $admin_user['durum'] !== 'aktif') {
     exit;
 }
 
-// İstatistikler - hata kontrolü ile
+// İstatistikler - Güvenli hata kontrolü ile
 $stats = [];
 
-// Kullanıcı istatistikleri
+// Kullanıcı istatistikleri - Güvenli sorgu
 try {
-    $stats['kullanicilar'] = [
-        'toplam' => $pdo->query("SELECT COUNT(*) FROM kullanicilar")->fetchColumn() ?: 0,
-        'aktif' => $pdo->query("SELECT COUNT(*) FROM kullanicilar WHERE durum = 'aktif'")->fetchColumn() ?: 0,
-        'premium' => $pdo->query("SELECT COUNT(*) FROM kullanicilar WHERE uyelik_tipi = 'premium'")->fetchColumn() ?: 0,
-        'vip' => $pdo->query("SELECT COUNT(*) FROM kullanicilar WHERE uyelik_tipi = 'vip'")->fetchColumn() ?: 0,
-        'bugun' => $pdo->query("SELECT COUNT(*) FROM kullanicilar WHERE DATE(kayit_tarihi) = CURDATE()")->fetchColumn() ?: 0
-    ];
+    // Önce tablo varlığını kontrol et
+    $table_check = $pdo->query("SHOW TABLES LIKE 'kullanicilar'")->fetch();
+    if ($table_check) {
+        $stats['kullanicilar'] = [
+            'toplam' => (int)$pdo->query("SELECT COUNT(*) FROM kullanicilar")->fetchColumn(),
+            'aktif' => (int)$pdo->query("SELECT COUNT(*) FROM kullanicilar WHERE durum = 'aktif'")->fetchColumn(),
+            'premium' => (int)$pdo->query("SELECT COUNT(*) FROM kullanicilar WHERE uyelik_tipi = 'premium'")->fetchColumn(),
+            'vip' => (int)$pdo->query("SELECT COUNT(*) FROM kullanicilar WHERE uyelik_tipi = 'vip'")->fetchColumn(),
+            'bugun' => (int)$pdo->query("SELECT COUNT(*) FROM kullanicilar WHERE DATE(kayit_tarihi) = CURDATE()")->fetchColumn()
+        ];
+    } else {
+        $stats['kullanicilar'] = ['toplam' => 0, 'aktif' => 0, 'premium' => 0, 'vip' => 0, 'bugun' => 0];
+    }
 } catch (PDOException $e) {
     $stats['kullanicilar'] = ['toplam' => 0, 'aktif' => 0, 'premium' => 0, 'vip' => 0, 'bugun' => 0];
 }
