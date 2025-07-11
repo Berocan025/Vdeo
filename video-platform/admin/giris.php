@@ -19,58 +19,46 @@ $success_message = '';
 
 // Form gönderildi mi?
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $kullanici_adi = trim($_POST['kullanici_adi'] ?? '');
-    $sifre = $_POST['sifre'] ?? '';
-    $beni_hatirla = isset($_POST['beni_hatirla']);
+    $email = trim($_POST['email']);
+    $sifre = $_POST['sifre'];
     
-    if (empty($kullanici_adi) || empty($sifre)) {
-        $error_message = 'Kullanıcı adı ve şifre gereklidir.';
-    } else {
+    if (!empty($email) && !empty($sifre)) {
         try {
-            // Admin kullanıcısını kontrol et
-            $stmt = $pdo->prepare("SELECT * FROM adminler WHERE (kullanici_adi = ? OR email = ?) AND durum = 'aktif'");
-            $stmt->execute([$kullanici_adi, $kullanici_adi]);
+            // Admin kullanıcısını bul ve doğrula
+            $stmt = $pdo->prepare("SELECT * FROM admin_kullanicilar WHERE email = ? AND durum = 'aktif'");
+            $stmt->execute([$email]);
             $admin = $stmt->fetch();
             
             if ($admin && password_verify($sifre, $admin['sifre'])) {
-                // Giriş başarılı
+                // Oturum başlat
                 $_SESSION['admin_id'] = $admin['id'];
+                $_SESSION['admin_email'] = $admin['email'];
+                $_SESSION['admin_ad'] = $admin['ad'];
+                $_SESSION['admin_soyad'] = $admin['soyad'];
+                $_SESSION['admin_yetki'] = $admin['yetki_seviyesi'];
                 $_SESSION['admin_logged_in'] = true;
-                $_SESSION['admin_kullanici_adi'] = $admin['kullanici_adi'];
-                $_SESSION['admin_rol'] = $admin['rol'];
                 
-                // Son giriş tarihini güncelle
-                $update_stmt = $pdo->prepare("UPDATE adminler SET son_giris = NOW(), son_ip = ? WHERE id = ?");
-                $update_stmt->execute([$_SERVER['REMOTE_ADDR'], $admin['id']]);
-                
-                // Beni hatırla seçeneği
-                if ($beni_hatirla) {
-                    $token = bin2hex(random_bytes(32));
-                    setcookie('admin_remember_token', $token, time() + (30 * 24 * 60 * 60), '/', '', true, true); // 30 gün
-                    
-                    // Token'ı veritabanına kaydet
-                    $token_stmt = $pdo->prepare("UPDATE adminler SET remember_token = ? WHERE id = ?");
-                    $token_stmt->execute([$token, $admin['id']]);
+                // Son giriş bilgilerini güncelle
+                try {
+                    $update_stmt = $pdo->prepare("UPDATE admin_kullanicilar SET son_giris_tarihi = NOW(), son_giris_ip = ? WHERE id = ?");
+                    $update_stmt->execute([$_SERVER['REMOTE_ADDR'], $admin['id']]);
+                } catch (PDOException $e) {
+                    // Son giriş güncellenemezse önemli değil, devam et
+                    error_log("Admin son giriş güncelleme hatası: " . $e->getMessage());
                 }
                 
-                // Giriş logunu kaydet
-                $log_stmt = $pdo->prepare("INSERT INTO admin_loglar (admin_id, islem, aciklama, ip_adresi) VALUES (?, 'giris', 'Admin paneline giriş yapıldı', ?)");
-                $log_stmt->execute([$admin['id'], $_SERVER['REMOTE_ADDR']]);
-                
-                $success_message = 'Giriş başarılı! Yönlendiriliyorsunuz...';
-                
-                // 2 saniye sonra yönlendir
-                header("refresh:2;url=index.php");
+                // Admin paneline yönlendir
+                header('Location: index.php');
+                exit;
             } else {
-                $error_message = 'Kullanıcı adı veya şifre hatalı.';
-                
-                // Başarısız giriş denemesini logla
-                $log_stmt = $pdo->prepare("INSERT INTO admin_loglar (admin_id, islem, aciklama, ip_adresi) VALUES (0, 'giris_hatasi', 'Başarısız giriş denemesi: ' . ?, ?)");
-                $log_stmt->execute([$kullanici_adi, $_SERVER['REMOTE_ADDR']]);
+                $error_message = "Geçersiz e-posta veya şifre!";
             }
-        } catch (Exception $e) {
-            $error_message = 'Bir hata oluştu. Lütfen tekrar deneyin.';
+        } catch (PDOException $e) {
+            $error_message = "Sistem hatası: " . $e->getMessage();
+            error_log("Admin giriş hatası: " . $e->getMessage());
         }
+    } else {
+        $error_message = "Lütfen tüm alanları doldurun!";
     }
 }
 
@@ -488,15 +476,15 @@ $page_title = "Admin Giriş";
 
         <form class="login-form" method="POST" action="">
             <div class="form-group">
-                <label for="kullanici_adi" class="form-label">Kullanıcı Adı veya E-posta</label>
+                <label for="email" class="form-label">E-posta Adresi</label>
                 <div class="input-group">
-                    <i class="fas fa-user input-icon"></i>
-                    <input type="text" 
-                           id="kullanici_adi" 
-                           name="kullanici_adi" 
+                    <i class="fas fa-envelope input-icon"></i>
+                    <input type="email" 
+                           id="email" 
+                           name="email" 
                            class="form-input" 
-                           placeholder="Kullanıcı adınızı girin"
-                           value="<?php echo htmlspecialchars($_POST['kullanici_adi'] ?? ''); ?>"
+                           placeholder="E-posta adresinizi girin"
+                           value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>"
                            required>
                 </div>
             </div>
@@ -517,10 +505,7 @@ $page_title = "Admin Giriş";
                 </div>
             </div>
 
-            <div class="form-checkbox">
-                <input type="checkbox" id="beni_hatirla" name="beni_hatirla">
-                <label for="beni_hatirla">Beni hatırla</label>
-            </div>
+
 
             <button type="submit" class="login-button" id="loginButton">
                 <i class="fas fa-sign-in-alt"></i>
@@ -582,9 +567,9 @@ document.addEventListener('keydown', function(e) {
 
 // Auto focus
 document.addEventListener('DOMContentLoaded', function() {
-    const usernameInput = document.getElementById('kullanici_adi');
-    if (usernameInput && !usernameInput.value) {
-        usernameInput.focus();
+    const emailInput = document.getElementById('email');
+    if (emailInput && !emailInput.value) {
+        emailInput.focus();
     }
 });
 

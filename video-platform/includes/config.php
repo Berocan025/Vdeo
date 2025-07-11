@@ -18,7 +18,9 @@ ini_set('display_errors', 1);
 date_default_timezone_set('Europe/Istanbul');
 
 // Config dosyasını dahil et
-if (file_exists(__DIR__ . '/../config/config.php')) {
+if (file_exists(__DIR__ . '/../config/database.php')) {
+    require_once __DIR__ . '/../config/database.php';
+} elseif (file_exists(__DIR__ . '/../config/config.php')) {
     require_once __DIR__ . '/../config/config.php';
 } else {
     // Kurulum yapılmamışsa kurulum sayfasına yönlendir
@@ -28,25 +30,79 @@ if (file_exists(__DIR__ . '/../config/config.php')) {
     }
 }
 
-// Veritabanı bağlantısı
-try {
-    $pdo = new PDO("mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8mb4", DB_USER, DB_PASS);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
-} catch (PDOException $e) {
-    die("Veritabanı bağlantı hatası: " . $e->getMessage());
+// Veritabanı bağlantısı - sadece constants tanımlıysa bağlan
+if (defined('DB_HOST') && defined('DB_NAME') && defined('DB_USER') && defined('DB_PASS')) {
+    try {
+        $pdo = new PDO("mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8mb4", DB_USER, DB_PASS, [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES => false
+        ]);
+    } catch (PDOException $e) {
+        // Kurulum sayfasında değilsek hata göster
+        if (!strpos($_SERVER['REQUEST_URI'], 'install.php')) {
+            die("Veritabanı bağlantı hatası: " . $e->getMessage());
+        }
+    }
 }
 
-// Site ayarlarını çek
+// Site ayarlarını çek (hem eski hem yeni tablo yapısını destekle)
 function getSiteSettings() {
     global $pdo;
-    $stmt = $pdo->query("SELECT * FROM ayarlar LIMIT 1");
-    return $stmt->fetch();
+    
+    if (!isset($pdo)) {
+        return false;
+    }
+    
+    try {
+        // Önce yeni tablo yapısını dene (site_ayarlari)
+        $stmt = $pdo->query("SELECT anahtar, deger FROM site_ayarlari");
+        $settings = [];
+        while ($row = $stmt->fetch()) {
+            $settings[$row['anahtar']] = $row['deger'];
+        }
+        return $settings;
+    } catch (PDOException $e) {
+        try {
+            // Eski tablo yapısını dene (ayarlar)
+            $stmt = $pdo->query("SELECT * FROM ayarlar LIMIT 1");
+            return $stmt->fetch();
+        } catch (PDOException $e2) {
+            // Hiçbir tablo yoksa varsayılan değerler döndür
+            return false;
+        }
+    }
+}
+
+// Admin oturum kontrolü (hem eski hem yeni tablo yapısını destekle)
+function checkAdminSession() {
+    global $pdo;
+    
+    if (!isset($_SESSION['admin_id']) || !isset($pdo)) {
+        return false;
+    }
+    
+    try {
+        // Önce yeni tablo yapısını dene (admin_kullanicilar)
+        $stmt = $pdo->prepare("SELECT * FROM admin_kullanicilar WHERE id = ? AND durum = 'aktif'");
+        $stmt->execute([$_SESSION['admin_id']]);
+        return $stmt->fetch();
+    } catch (PDOException $e) {
+        try {
+            // Eski tablo yapısını dene (adminler)
+            $stmt = $pdo->prepare("SELECT * FROM adminler WHERE id = ? AND durum = 'aktif'");
+            $stmt->execute([$_SESSION['admin_id']]);
+            return $stmt->fetch();
+        } catch (PDOException $e2) {
+            return false;
+        }
+    }
 }
 
 // Güvenli URL fonksiyonu
 function siteUrl($path = '') {
-    $url = rtrim(SITE_URL, '/');
+    $base_url = defined('SITE_URL') ? SITE_URL : 'http://' . $_SERVER['HTTP_HOST'] . dirname($_SERVER['SCRIPT_NAME']);
+    $url = rtrim($base_url, '/');
     if ($path) {
         $url .= '/' . ltrim($path, '/');
     }
@@ -129,8 +185,13 @@ function verifyCSRFToken($token) {
 
 // Kullanıcı oturum bilgilerini kontrol et
 function checkUserSession() {
-    if (isset($_SESSION['user_id'])) {
-        global $pdo;
+    global $pdo;
+    
+    if (!isset($_SESSION['user_id']) || !isset($pdo)) {
+        return false;
+    }
+    
+    try {
         $stmt = $pdo->prepare("SELECT * FROM kullanicilar WHERE id = ? AND durum = 'aktif'");
         $stmt->execute([$_SESSION['user_id']]);
         $user = $stmt->fetch();
@@ -142,18 +203,15 @@ function checkUserSession() {
         
         // Premium ve VIP sürelerini kontrol et
         $now = date('Y-m-d H:i:s');
-        if ($user['premium_bitis'] && $user['premium_bitis'] < $now) {
-            $pdo->prepare("UPDATE kullanicilar SET uyelik_tipi = 'kullanici', premium_bitis = NULL WHERE id = ?")->execute([$user['id']]);
-            $_SESSION['user_membership'] = 'kullanici';
-        }
-        if ($user['vip_bitis'] && $user['vip_bitis'] < $now) {
-            $pdo->prepare("UPDATE kullanicilar SET uyelik_tipi = 'kullanici', vip_bitis = NULL WHERE id = ?")->execute([$user['id']]);
+        if (isset($user['uyelik_bitis']) && $user['uyelik_bitis'] && $user['uyelik_bitis'] < $now) {
+            $pdo->prepare("UPDATE kullanicilar SET uyelik_tipi = 'kullanici', uyelik_bitis = NULL WHERE id = ?")->execute([$user['id']]);
             $_SESSION['user_membership'] = 'kullanici';
         }
         
         return $user;
+    } catch (PDOException $e) {
+        return false;
     }
-    return false;
 }
 
 // Sayfalama fonksiyonu
@@ -205,18 +263,50 @@ function pagination($current_page, $total_pages, $base_url) {
     return $pagination;
 }
 
-// Site ayarlarını global değişkene al
-$site_settings = getSiteSettings();
-if (!$site_settings) {
+// Kurulum kontrolü ve varsayılan ayarlar
+$site_settings = [];
+if (isset($pdo)) {
+    try {
+        $site_settings = getSiteSettings();
+    } catch (Exception $e) {
+        // Kurulum aşamasında hata varsa varsayılan değerler kullan
+    }
+}
+
+// Varsayılan site ayarları
+if (!$site_settings || empty($site_settings)) {
     $site_settings = [
-        'site_adi' => 'DOBİEN Video Platform',
-        'site_url' => SITE_URL,
-        'site_aciklama' => 'Modern Video Paylaşım Platformu',
-        'footer_metin' => 'DOBİEN tarafından geliştirildi. Tüm hakları saklıdır.'
+        'site_baslik' => 'DOBİEN Video Platform',
+        'site_aciklama' => 'Premium video deneyimi için üyeliğinizi yükseltin. 4K kalite, VIP üyelik avantajları ve sınırsız izleme deneyimi.',
+        'site_anahtar_kelimeler' => 'video platform, premium videolar, 4k video, vip üyelik, DOBİEN',
+        'footer_metin' => '© 2024 DOBİEN Video Platform. Tüm hakları saklıdır.',
+        'yas_dogrulama_aktif' => '1',
+        'varsayilan_video_kalite' => '720p'
     ];
 }
 
 // Kullanıcı oturum kontrolü
 $current_user = checkUserSession();
+
+// Veritabanı tablolarının varlığını kontrol et (kurulum sonrası)
+function checkDatabaseTables() {
+    global $pdo;
+    
+    if (!isset($pdo)) {
+        return false;
+    }
+    
+    $required_tables = ['admin_kullanicilar', 'site_ayarlari', 'kullanicilar', 'kategoriler', 'videolar'];
+    
+    foreach ($required_tables as $table) {
+        try {
+            $pdo->query("SELECT 1 FROM `$table` LIMIT 1");
+        } catch (PDOException $e) {
+            return false;
+        }
+    }
+    
+    return true;
+}
 
 ?>

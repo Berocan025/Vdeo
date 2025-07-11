@@ -106,29 +106,100 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     
                     // SQL dosyasını oku ve çalıştır
                     $sql_file = 'database.sql';
-                    if (file_exists($sql_file)) {
-                        $sql_content = file_get_contents($sql_file);
+                    if (!file_exists($sql_file)) {
+                        throw new Exception("database.sql dosyası bulunamadı!");
+                    }
+                    
+                    $sql_content = file_get_contents($sql_file);
+                    if ($sql_content === false) {
+                        throw new Exception("database.sql dosyası okunamadı!");
+                    }
+                    
+                    // SQL komutlarını daha güvenli bir şekilde ayır
+                    $statements = [];
+                    $current_statement = '';
+                    $lines = explode("\n", $sql_content);
+                    
+                    foreach ($lines as $line) {
+                        $line = trim($line);
                         
-                        // SQL komutlarını ayır ve çalıştır
-                        $statements = explode(';', $sql_content);
+                        // Boş satırlar ve yorumları geç
+                        if (empty($line) || substr($line, 0, 2) === '--' || substr($line, 0, 2) === '/*') {
+                            continue;
+                        }
                         
-                        foreach ($statements as $statement) {
-                            $statement = trim($statement);
-                            if (!empty($statement) && !preg_match('/^--/', $statement)) {
-                                try {
-                                    $pdo->exec($statement);
-                                } catch (PDOException $e) {
-                                    // Hata olursa logla ama devam et
-                                    error_log("SQL Error: " . $e->getMessage() . " - Statement: " . $statement);
+                        $current_statement .= $line . "\n";
+                        
+                        // Eğer satır ; ile bitiyorsa statement tamamlandı
+                        if (substr($line, -1) === ';') {
+                            $statements[] = trim($current_statement);
+                            $current_statement = '';
+                        }
+                    }
+                    
+                    // SQL komutlarını çalıştır ve kritik hataları yakala
+                    $executed_statements = 0;
+                    $critical_tables = ['admin_kullanicilar', 'site_ayarlari', 'kullanicilar', 'kategoriler', 'videolar'];
+                    
+                    foreach ($statements as $statement) {
+                        if (!empty($statement)) {
+                            try {
+                                $pdo->exec($statement);
+                                $executed_statements++;
+                            } catch (PDOException $e) {
+                                // Kritik tablo oluşturma hatalarını özel olarak kontrol et
+                                $is_critical = false;
+                                foreach ($critical_tables as $table) {
+                                    if (strpos($statement, "CREATE TABLE `$table`") !== false || 
+                                        strpos($statement, "CREATE TABLE IF NOT EXISTS `$table`") !== false) {
+                                        $is_critical = true;
+                                        break;
+                                    }
                                 }
+                                
+                                if ($is_critical) {
+                                    throw new Exception("Kritik tablo oluşturma hatası: " . $e->getMessage() . " - SQL: " . substr($statement, 0, 100) . "...");
+                                }
+                                
+                                // Diğer hataları logla ama devam et
+                                error_log("SQL Warning: " . $e->getMessage());
                             }
                         }
                     }
                     
-                    // Admin kullanıcısını ekle
-                    $admin_query = "INSERT INTO admin_kullanicilar (ad, soyad, email, sifre, yetki_seviyesi) VALUES (?, ?, ?, ?, 'super_admin')";
-                    $admin_stmt = $pdo->prepare($admin_query);
-                    $admin_stmt->execute([$admin['name'], $admin['surname'], $admin['email'], $admin['password']]);
+                    if ($executed_statements === 0) {
+                        throw new Exception("Hiçbir SQL komutu çalıştırılamadı!");
+                    }
+                    
+                    // Kritik tabloların varlığını kontrol et
+                    foreach ($critical_tables as $table) {
+                        try {
+                            $pdo->query("SELECT 1 FROM `$table` LIMIT 1");
+                        } catch (PDOException $e) {
+                            throw new Exception("Kritik tablo '$table' oluşturulamadı veya erişilemiyor!");
+                        }
+                    }
+                    
+                    // Admin kullanıcısını ekle - önce tablo yapısını kontrol et
+                    try {
+                        $admin_query = "INSERT INTO admin_kullanicilar (ad, soyad, email, sifre, yetki_seviyesi) VALUES (?, ?, ?, ?, 'super_admin')";
+                        $admin_stmt = $pdo->prepare($admin_query);
+                        $admin_result = $admin_stmt->execute([$admin['name'], $admin['surname'], $admin['email'], $admin['password']]);
+                        
+                        if (!$admin_result) {
+                            throw new Exception("Admin kullanıcısı oluşturulamadı!");
+                        }
+                        
+                        // Admin kullanıcısının oluşturulduğunu doğrula
+                        $verify_admin = $pdo->prepare("SELECT id FROM admin_kullanicilar WHERE email = ?");
+                        $verify_admin->execute([$admin['email']]);
+                        if (!$verify_admin->fetch()) {
+                            throw new Exception("Admin kullanıcısı doğrulanamadı!");
+                        }
+                        
+                    } catch (PDOException $e) {
+                        throw new Exception("Admin kullanıcısı ekleme hatası: " . $e->getMessage());
+                    }
                     
                     // Config klasörünü oluştur
                     if (!file_exists('config')) {

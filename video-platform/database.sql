@@ -456,81 +456,81 @@ ALTER TABLE `sistem_loglari`
 -- --------------------------------------------------------
 
 ALTER TABLE `site_ayarlari`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
 
 ALTER TABLE `kullanicilar`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 ALTER TABLE `admin_kullanicilar`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 ALTER TABLE `kategoriler`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 ALTER TABLE `videolar`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1;
 
 ALTER TABLE `video_begeniler`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1;
 
 ALTER TABLE `favoriler`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1;
 
 ALTER TABLE `izleme_gecmisi`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1;
 
 ALTER TABLE `video_sikayetler`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1;
 
 ALTER TABLE `slider`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 ALTER TABLE `menu`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 ALTER TABLE `sayfalar`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 ALTER TABLE `admin_bildirimler`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1;
 
 ALTER TABLE `odeme_gecmisi`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1;
 
 ALTER TABLE `email_sablonlari`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 ALTER TABLE `istatistikler`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1;
 
 ALTER TABLE `sistem_loglari`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1;
 
 -- --------------------------------------------------------
--- Foreign Key Kısıtlamaları
+-- Foreign Key Constraints
 -- --------------------------------------------------------
 
 ALTER TABLE `videolar`
-  ADD CONSTRAINT `videolar_ibfk_1` FOREIGN KEY (`kategori_id`) REFERENCES `kategoriler` (`id`) ON DELETE SET NULL;
+  ADD CONSTRAINT `fk_videolar_kategori` FOREIGN KEY (`kategori_id`) REFERENCES `kategoriler` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 ALTER TABLE `video_begeniler`
-  ADD CONSTRAINT `video_begeniler_ibfk_1` FOREIGN KEY (`kullanici_id`) REFERENCES `kullanicilar` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `video_begeniler_ibfk_2` FOREIGN KEY (`video_id`) REFERENCES `videolar` (`id`) ON DELETE CASCADE;
+  ADD CONSTRAINT `fk_video_begeniler_kullanici` FOREIGN KEY (`kullanici_id`) REFERENCES `kullanicilar` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_video_begeniler_video` FOREIGN KEY (`video_id`) REFERENCES `videolar` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 ALTER TABLE `favoriler`
-  ADD CONSTRAINT `favoriler_ibfk_1` FOREIGN KEY (`kullanici_id`) REFERENCES `kullanicilar` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `favoriler_ibfk_2` FOREIGN KEY (`video_id`) REFERENCES `videolar` (`id`) ON DELETE CASCADE;
+  ADD CONSTRAINT `fk_favoriler_kullanici` FOREIGN KEY (`kullanici_id`) REFERENCES `kullanicilar` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_favoriler_video` FOREIGN KEY (`video_id`) REFERENCES `videolar` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 ALTER TABLE `izleme_gecmisi`
-  ADD CONSTRAINT `izleme_gecmisi_ibfk_1` FOREIGN KEY (`kullanici_id`) REFERENCES `kullanicilar` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `izleme_gecmisi_ibfk_2` FOREIGN KEY (`video_id`) REFERENCES `videolar` (`id`) ON DELETE CASCADE;
+  ADD CONSTRAINT `fk_izleme_gecmisi_kullanici` FOREIGN KEY (`kullanici_id`) REFERENCES `kullanicilar` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_izleme_gecmisi_video` FOREIGN KEY (`video_id`) REFERENCES `videolar` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 ALTER TABLE `video_sikayetler`
-  ADD CONSTRAINT `video_sikayetler_ibfk_1` FOREIGN KEY (`kullanici_id`) REFERENCES `kullanicilar` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `video_sikayetler_ibfk_2` FOREIGN KEY (`video_id`) REFERENCES `videolar` (`id`) ON DELETE CASCADE;
+  ADD CONSTRAINT `fk_video_sikayetler_kullanici` FOREIGN KEY (`kullanici_id`) REFERENCES `kullanicilar` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_video_sikayetler_video` FOREIGN KEY (`video_id`) REFERENCES `videolar` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 ALTER TABLE `odeme_gecmisi`
-  ADD CONSTRAINT `odeme_gecmisi_ibfk_1` FOREIGN KEY (`kullanici_id`) REFERENCES `kullanicilar` (`id`) ON DELETE CASCADE;
+  ADD CONSTRAINT `fk_odeme_gecmisi_kullanici` FOREIGN KEY (`kullanici_id`) REFERENCES `kullanicilar` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 COMMIT;
 

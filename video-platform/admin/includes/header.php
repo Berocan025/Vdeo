@@ -9,22 +9,20 @@ if (!defined('ADMIN_AREA')) {
     die('Bu sayfaya doğrudan erişim yasaktır!');
 }
 
-if (!isset($_SESSION['admin_id'])) {
-    header('Location: giris.php');
-    exit;
+// Admin oturum kontrolü
+$current_admin = checkAdminSession();
+if (!$current_admin) {
+    // Giriş sayfasında değilsek admin girişine yönlendir
+    if (!strpos($_SERVER['REQUEST_URI'], 'giris.php')) {
+        header('Location: giris.php');
+        exit;
+    }
 }
 
-// Admin bilgilerini al
-$admin_query = "SELECT * FROM admin_kullanicilar WHERE id = ? AND durum = 'aktif'";
-$admin_stmt = $pdo->prepare($admin_query);
-$admin_stmt->execute([$_SESSION['admin_id']]);
-$admin = $admin_stmt->fetch();
-
-if (!$admin) {
-    session_destroy();
-    header('Location: giris.php');
-    exit;
-}
+// Admin bilgilerini session'dan al
+$admin_name = isset($_SESSION['admin_ad']) ? $_SESSION['admin_ad'] : '';
+$admin_surname = isset($_SESSION['admin_soyad']) ? $_SESSION['admin_soyad'] : '';
+$admin_email = isset($_SESSION['admin_email']) ? $_SESSION['admin_email'] : '';
 
 // Site ayarlarını al
 $settings_query = "SELECT * FROM site_ayarlari";
