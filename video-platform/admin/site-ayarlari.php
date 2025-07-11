@@ -143,92 +143,29 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 }
 
-// Mevcut ayarları çek - site_ayarlari tablosundan
-try {
-    $stmt = $pdo->query("SELECT anahtar, deger FROM site_ayarlari");
-    $settings_rows = $stmt->fetchAll();
-    
-    $ayarlar = [];
-    foreach ($settings_rows as $row) {
-        $ayarlar[$row['anahtar']] = $row['deger'];
-    }
-    
-    // Eksik ayarları varsayılan değerlerle doldur
-    $default_settings = [
-        'site_baslik' => 'DOBİEN Video Platform',
-        'site_aciklama' => 'Modern Video Paylaşım Platformu',
-        'site_anahtar_kelimeler' => 'video, platform, DOBİEN',
-        'footer_metin' => 'DOBİEN tarafından geliştirildi. Tüm hakları saklıdır.',
-        'sistem_email' => 'info@dobien.com',
-        'yas_dogrulama_aktif' => '1'
-    ];
-    
-    foreach ($default_settings as $key => $value) {
-        if (!isset($ayarlar[$key])) {
-            $ayarlar[$key] = $value;
-            // Veritabanına da ekle
-            try {
-                $stmt = $pdo->prepare("INSERT INTO site_ayarlari (anahtar, deger, aciklama) VALUES (?, ?, ?)");
-                $stmt->execute([$key, $value, ucfirst(str_replace('_', ' ', $key))]);
-            } catch (PDOException $e) {
-                // Duplicate key hatası görmezden gel
-            }
-        }
-    }
-    
-    // Eski format için uyumluluk
-    $ayarlar['site_adi'] = $ayarlar['site_baslik'] ?? 'DOBİEN Video Platform';
-    $ayarlar['site_url'] = $_SERVER['HTTP_HOST'] ? 'http://' . $_SERVER['HTTP_HOST'] : 'http://localhost';
-    $ayarlar['site_aciklama'] = $ayarlar['site_aciklama'] ?? 'Modern Video Paylaşım Platformu';
-    $ayarlar['meta_anahtar'] = $ayarlar['site_anahtar_kelimeler'] ?? '';
-    $ayarlar['email'] = $ayarlar['sistem_email'] ?? '';
-    $ayarlar['telefon'] = $ayarlar['telefon'] ?? '';
-    $ayarlar['adres'] = $ayarlar['adres'] ?? '';
-    $ayarlar['sosyal_facebook'] = $ayarlar['sosyal_facebook'] ?? '';
-    $ayarlar['sosyal_twitter'] = $ayarlar['sosyal_twitter'] ?? '';
-    $ayarlar['sosyal_instagram'] = $ayarlar['sosyal_instagram'] ?? '';
-    $ayarlar['sosyal_youtube'] = $ayarlar['sosyal_youtube'] ?? '';
-    $ayarlar['analytics_kod'] = $ayarlar['google_analytics'] ?? '';
-    $ayarlar['kayit_durumu'] = $ayarlar['kayit_durumu'] ?? '1';
-    $ayarlar['email_dogrulama'] = $ayarlar['email_dogrulama'] ?? '0';
-    $ayarlar['logo'] = $ayarlar['site_logo'] ?? '';
-    $ayarlar['favicon'] = $ayarlar['site_favicon'] ?? '';
-    
-} catch (PDOException $e) {
-    // Tablo yoksa varsayılan değerler kullan
-    $ayarlar = [
-        'site_adi' => 'DOBİEN Video Platform',
-        'site_url' => 'http://localhost',
-        'site_aciklama' => 'Modern Video Paylaşım Platformu',
-        'meta_anahtar' => 'video, platform, DOBİEN',
-        'footer_metin' => 'DOBİEN tarafından geliştirildi. Tüm hakları saklıdır.',
-        'email' => '',
-        'telefon' => '',
-        'adres' => '',
-        'sosyal_facebook' => '',
-        'sosyal_twitter' => '',
-        'sosyal_instagram' => '',
-        'sosyal_youtube' => '',
-        'analytics_kod' => '',
-        'kayit_durumu' => '1',
-        'email_dogrulama' => '0',
-        'logo' => '',
-        'favicon' => ''
-    ];
+// Mevcut ayarları çek
+$ayarlar = $pdo->query("SELECT * FROM ayarlar WHERE id = 1")->fetch();
+if (!$ayarlar) {
+    // İlk kurulum için varsayılan ayarlar oluştur
+    $pdo->exec("INSERT INTO ayarlar (site_adi, site_url, site_aciklama, footer_metin) VALUES ('DOBİEN Video Platform', 'http://localhost', 'Modern Video Paylaşım Platformu', 'DOBİEN tarafından geliştirildi. Tüm hakları saklıdır.')");
+    $ayarlar = $pdo->query("SELECT * FROM ayarlar WHERE id = 1")->fetch();
 }
 
-// Yaş uyarısı ayarlarını site_ayarlari tablosundan çek
-$yas_uyarisi = [
-    'aktif' => $ayarlar['yas_dogrulama_aktif'] ?? '1',
-    'baslik' => $ayarlar['yas_dogrulama_site_baslik'] ?? 'DOBİEN',
-    'alt_baslik' => $ayarlar['yas_dogrulama_site_alt_baslik'] ?? 'Video Platform',
-    'uyari_baslik' => $ayarlar['yas_dogrulama_baslik'] ?? 'Yaş Doğrulama Gerekli',
-    'uyari_metni' => $ayarlar['yas_dogrulama_mesaj'] ?? 'Bu siteye erişebilmeniz için 18 yaşından büyük olmanız gerekmektedir. Sitemiz yetişkin içerikler barındırmaktadır ve yalnızca reşit kullanıcılar için uygundur.',
-    'onay_butonu' => $ayarlar['yas_dogrulama_onay_butonu'] ?? '18 yaşından büyüğüm',
-    'red_butonu' => $ayarlar['yas_dogrulama_red_butonu'] ?? '18 yaşında değilim',
-    'red_mesaji' => $ayarlar['yas_dogrulama_red_mesaji'] ?? 'Üzgünüz, sitemiz sizin için uygun değildir. 18 yaş altındaki kullanıcılar siteye erişemez.',
-    'gelistirici_notu' => $ayarlar['yas_dogrulama_gelistirici_notu'] ?? 'Bu sistem DOBİEN tarafından geliştirilmiştir ve kullanıcı güvenliği için tasarlanmıştır.'
-];
+// Yaş uyarısı ayarlarını çek
+$yas_uyarisi = $pdo->query("SELECT * FROM yas_uyarisi_ayarlari WHERE id = 1")->fetch();
+if (!$yas_uyarisi) {
+    $yas_uyarisi = [
+        'aktif' => 1,
+        'baslik' => 'DOBİEN',
+        'alt_baslik' => 'Video Platform',
+        'uyari_baslik' => 'Yaş Doğrulama Gerekli',
+        'uyari_metni' => 'Bu siteye erişebilmeniz için 18 yaşından büyük olmanız gerekmektedir. Sitemiz yetişkin içerikler barındırmaktadır ve yalnızca reşit kullanıcılar için uygundur.',
+        'onay_butonu' => '18 yaşından büyüğüm',
+        'red_butonu' => '18 yaşında değilim',
+        'red_mesaji' => 'Üzgünüz, sitemiz sizin için uygun değildir. 18 yaş altındaki kullanıcılar siteye erişemez.',
+        'gelistirici_notu' => 'Bu sistem DOBİEN tarafından geliştirilmiştir ve kullanıcı güvenliği için tasarlanmıştır.'
+    ];
+}
 
 $page_title = "Site Ayarları";
 ?>
