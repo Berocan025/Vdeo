@@ -236,30 +236,63 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             }
         }
 
-        // Config dosyası oluştur
+        // Config dosyası oluştur - Tam entegrasyon
         $config_content = "<?php
 /**
- * DOBİEN Video Platform - Veritabanı Ayarları
+ * DOBİEN Video Platform - Ana Config Dosyası
  * Geliştirici: DOBİEN
+ * Veritabanı ve Site Ayarları
+ * Tüm Hakları Saklıdır © DOBİEN
  */
 
+// Güvenlik kontrolü
+if (!defined('ABSPATH')) {
+    define('ABSPATH', dirname(__FILE__) . '/../');
+}
+
+// Veritabanı Ayarları
 define('DB_HOST', '$veritabani_host');
 define('DB_NAME', '$veritabani_adi');
 define('DB_USER', '$veritabani_kullanici');
 define('DB_PASS', '$veritabani_sifre');
+define('DB_CHARSET', 'utf8mb4');
 
+// Site Ayarları
 define('SITE_URL', '$site_url');
 define('SITE_NAME', '$site_adi');
+define('SITE_VERSION', '1.0.0');
 
-// Güvenlik anahtarı
-define('SECURITY_KEY', '" . bin2hex(random_bytes(32)) . "');
+// Dosya Yolları
+define('UPLOADS_PATH', ABSPATH . 'uploads/');
+define('ASSETS_PATH', ABSPATH . 'assets/');
+define('INCLUDES_PATH', ABSPATH . 'includes/');
 
-// Dosya yükleme ayarları
-define('UPLOAD_PATH', 'uploads/');
+// Güvenlik Anahtarları
+define('SALT_KEY', '" . bin2hex(random_bytes(32)) . "');
+define('AUTH_KEY', '" . bin2hex(random_bytes(32)) . "');
+define('SECURE_AUTH_KEY', '" . bin2hex(random_bytes(32)) . "');
+
+// Dosya Upload Ayarları
 define('MAX_FILE_SIZE', 500 * 1024 * 1024); // 500MB
+define('ALLOWED_VIDEO_FORMATS', 'mp4,avi,mov,wmv,flv');
+define('ALLOWED_IMAGE_FORMATS', 'jpg,jpeg,png,gif,webp');
 
-// Geliştirici bilgisi
-define('DEVELOPER', 'DOBİEN');
+// Cache ve Performans
+define('CACHE_ENABLED', true);
+define('CACHE_TIME', 3600);
+
+// Zaman Dilimi
+date_default_timezone_set('Europe/Istanbul');
+
+// Session ayarları
+ini_set('session.cookie_httponly', 1);
+ini_set('session.use_strict_mode', 1);
+
+// Bellek ve upload limitleri
+ini_set('memory_limit', '256M');
+ini_set('upload_max_filesize', '500M');
+ini_set('post_max_size', '500M');
+ini_set('max_execution_time', 300);
 
 ?>";
 

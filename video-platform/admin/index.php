@@ -1,4 +1,4 @@
-<?php
+THIS SHOULD BE A LINTER ERROR<?php
 /**
  * DOBİEN Video Platform - Admin Panel Ana Sayfası
  * Geliştirici: DOBİEN
