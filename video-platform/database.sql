@@ -220,6 +220,13 @@ CREATE TABLE `slider` (
   `guncelleme_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+INSERT INTO `slider` (`baslik`, `aciklama`, `resim`, `link`, `buton_metni`, `siralama`, `durum`) VALUES
+('DOBİEN Video Platform''a Hoş Geldiniz', 'Premium video deneyimi için üyeliğinizi yükseltin. 4K kalite, sınırsız izleme ve özel içerikler.', 'slide1.jpg', '/uyelik-yukselt.php', 'Üyeliği Yükselt', 1, 'aktif'),
+('VIP Üyelik Avantajları', '1080p kalitede videolar izleyin. VIP üyelerimize özel içerikler ve avantajlar.', 'slide2.jpg', '/vip.php', 'VIP Ol', 2, 'aktif'),
+('Premium 4K İçerikler', 'En yüksek kalitede video deneyimi. Premium üyelerimize özel 4K Ultra HD videolar.', 'slide3.jpg', '/premium.php', 'Premium Ol', 3, 'aktif'),
+('Popüler Videolar', 'En çok izlenen ve beğenilen videolarımızı keşfedin.', 'slide4.jpg', '/populer.php', 'Keşfet', 4, 'aktif'),
+('Yeni Eklenen İçerikler', 'Her gün yeni videolar ekliyoruz. Güncel içerikleri kaçırmayın.', 'slide5.jpg', '/yeni-videolar.php', 'İncele', 5, 'aktif');
+
 -- --------------------------------------------------------
 -- Menü Tablosu
 -- --------------------------------------------------------
@@ -500,7 +507,7 @@ ALTER TABLE `sistem_loglari`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 -- --------------------------------------------------------
--- Foreign Key Constraints
+-- Foreign Key Kısıtlamaları
 -- --------------------------------------------------------
 
 ALTER TABLE `videolar`
@@ -521,9 +528,6 @@ ALTER TABLE `izleme_gecmisi`
 ALTER TABLE `video_sikayetler`
   ADD CONSTRAINT `video_sikayetler_ibfk_1` FOREIGN KEY (`kullanici_id`) REFERENCES `kullanicilar` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `video_sikayetler_ibfk_2` FOREIGN KEY (`video_id`) REFERENCES `videolar` (`id`) ON DELETE CASCADE;
-
-ALTER TABLE `menu`
-  ADD CONSTRAINT `menu_ibfk_1` FOREIGN KEY (`ust_menu_id`) REFERENCES `menu` (`id`) ON DELETE CASCADE;
 
 ALTER TABLE `odeme_gecmisi`
   ADD CONSTRAINT `odeme_gecmisi_ibfk_1` FOREIGN KEY (`kullanici_id`) REFERENCES `kullanicilar` (`id`) ON DELETE CASCADE;
