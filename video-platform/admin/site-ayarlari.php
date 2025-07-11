@@ -143,12 +143,91 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 }
 
-// Mevcut ayarları çek
-$ayarlar = $pdo->query("SELECT * FROM ayarlar WHERE id = 1")->fetch();
+// Mevcut ayarları güvenli şekilde çek
+try {
+    $ayarlar = $pdo->query("SELECT * FROM ayarlar WHERE id = 1")->fetch();
+} catch (PDOException $e) {
+    // Ayarlar tablosu yoksa oluştur
+    try {
+        $pdo->exec("CREATE TABLE IF NOT EXISTS ayarlar (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            site_adi VARCHAR(255) DEFAULT 'DOBİEN Video Platform',
+            site_url VARCHAR(255) DEFAULT 'http://localhost',
+            site_aciklama TEXT DEFAULT 'Modern Video Paylaşım Platformu',
+            meta_anahtar TEXT,
+            email VARCHAR(255),
+            telefon VARCHAR(50),
+            adres TEXT,
+            footer_metin TEXT DEFAULT 'DOBİEN tarafından geliştirildi. Tüm hakları saklıdır.',
+            logo VARCHAR(255),
+            favicon VARCHAR(255),
+            sosyal_facebook VARCHAR(255),
+            sosyal_twitter VARCHAR(255),
+            sosyal_instagram VARCHAR(255),
+            sosyal_youtube VARCHAR(255),
+            analytics_kod TEXT,
+            kayit_durumu TINYINT DEFAULT 1,
+            email_dogrulama TINYINT DEFAULT 0,
+            olusturma_tarihi TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )");
+        
+        // Varsayılan ayarları ekle
+        $pdo->exec("INSERT INTO ayarlar (site_adi, site_url, site_aciklama, footer_metin) VALUES ('DOBİEN Video Platform', 'http://localhost', 'Modern Video Paylaşım Platformu', 'DOBİEN tarafından geliştirildi. Tüm hakları saklıdır.')");
+        
+        $ayarlar = $pdo->query("SELECT * FROM ayarlar WHERE id = 1")->fetch();
+    } catch (PDOException $e2) {
+        // Tablo oluşturulamadı, varsayılan değerler kullan
+        $ayarlar = [
+            'id' => 1,
+            'site_adi' => 'DOBİEN Video Platform',
+            'site_url' => 'http://localhost',
+            'site_aciklama' => 'Modern Video Paylaşım Platformu',
+            'meta_anahtar' => '',
+            'email' => '',
+            'telefon' => '',
+            'adres' => '',
+            'footer_metin' => 'DOBİEN tarafından geliştirildi. Tüm hakları saklıdır.',
+            'logo' => '',
+            'favicon' => '',
+            'sosyal_facebook' => '',
+            'sosyal_twitter' => '',
+            'sosyal_instagram' => '',
+            'sosyal_youtube' => '',
+            'analytics_kod' => '',
+            'kayit_durumu' => 1,
+            'email_dogrulama' => 0
+        ];
+    }
+}
+
 if (!$ayarlar) {
     // İlk kurulum için varsayılan ayarlar oluştur
-    $pdo->exec("INSERT INTO ayarlar (site_adi, site_url, site_aciklama, footer_metin) VALUES ('DOBİEN Video Platform', 'http://localhost', 'Modern Video Paylaşım Platformu', 'DOBİEN tarafından geliştirildi. Tüm hakları saklıdır.')");
-    $ayarlar = $pdo->query("SELECT * FROM ayarlar WHERE id = 1")->fetch();
+    try {
+        $pdo->exec("INSERT INTO ayarlar (site_adi, site_url, site_aciklama, footer_metin) VALUES ('DOBİEN Video Platform', 'http://localhost', 'Modern Video Paylaşım Platformu', 'DOBİEN tarafından geliştirildi. Tüm hakları saklıdır.')");
+        $ayarlar = $pdo->query("SELECT * FROM ayarlar WHERE id = 1")->fetch();
+    } catch (PDOException $e) {
+        // Varsayılan değerler kullan
+        $ayarlar = [
+            'id' => 1,
+            'site_adi' => 'DOBİEN Video Platform',
+            'site_url' => 'http://localhost',
+            'site_aciklama' => 'Modern Video Paylaşım Platformu',
+            'meta_anahtar' => '',
+            'email' => '',
+            'telefon' => '',
+            'adres' => '',
+            'footer_metin' => 'DOBİEN tarafından geliştirildi. Tüm hakları saklıdır.',
+            'logo' => '',
+            'favicon' => '',
+            'sosyal_facebook' => '',
+            'sosyal_twitter' => '',
+            'sosyal_instagram' => '',
+            'sosyal_youtube' => '',
+            'analytics_kod' => '',
+            'kayit_durumu' => 1,
+            'email_dogrulama' => 0
+        ];
+    }
 }
 
 // Yaş uyarısı ayarlarını çek

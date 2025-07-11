@@ -7,10 +7,33 @@
 
 // Admin bilgilerini al (eğer henüz yüklenmemişse)
 if (!isset($admin_user)) {
-    $admin_query = "SELECT * FROM adminler WHERE id = ?";
-    $admin_stmt = $pdo->prepare($admin_query);
-    $admin_stmt->execute([$_SESSION['admin_id']]);
-    $admin_user = $admin_stmt->fetch();
+    // Admin bilgilerini güvenli şekilde al
+    try {
+        // Önce yeni tablo yapısını dene (admin_kullanicilar)
+        $admin_query = "SELECT * FROM admin_kullanicilar WHERE id = ?";
+        $admin_stmt = $pdo->prepare($admin_query);
+        $admin_stmt->execute([$_SESSION['admin_id']]);
+        $admin_user = $admin_stmt->fetch();
+    } catch (PDOException $e) {
+        // Eski tablo yapısını dene (adminler)
+        try {
+            $admin_query = "SELECT * FROM adminler WHERE id = ?";
+            $admin_stmt = $pdo->prepare($admin_query);
+            $admin_stmt->execute([$_SESSION['admin_id']]);
+            $admin_user = $admin_stmt->fetch();
+        } catch (PDOException $e2) {
+            // Hiçbir admin tablosu bulunamadı
+            $admin_user = [
+                'id' => $_SESSION['admin_id'],
+                'kullanici_adi' => 'Admin',
+                'ad' => 'DOBİEN',
+                'soyad' => 'Admin',
+                'email' => 'admin@dobien.com',
+                'rol' => 'super_admin',
+                'avatar' => null
+            ];
+        }
+    }
 }
 
 // Sayfa başlığını belirle
