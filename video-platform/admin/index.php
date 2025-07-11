@@ -1,4 +1,4 @@
-THIS SHOULD BE A LINTER ERROR<?php
+<?php
 /**
  * DOBİEN Video Platform - Admin Panel Ana Sayfası
  * Geliştirici: DOBİEN
@@ -68,18 +68,24 @@ if (!$admin_user || $admin_user['durum'] !== 'aktif') {
     exit;
 }
 
-// İstatistikler - hata kontrolü ile
+// İstatistikler - Güvenli hata kontrolü ile
 $stats = [];
 
-// Kullanıcı istatistikleri
+// Kullanıcı istatistikleri - Güvenli sorgu
 try {
-    $stats['kullanicilar'] = [
-        'toplam' => $pdo->query("SELECT COUNT(*) FROM kullanicilar")->fetchColumn() ?: 0,
-        'aktif' => $pdo->query("SELECT COUNT(*) FROM kullanicilar WHERE durum = 'aktif'")->fetchColumn() ?: 0,
-        'premium' => $pdo->query("SELECT COUNT(*) FROM kullanicilar WHERE uyelik_tipi = 'premium'")->fetchColumn() ?: 0,
-        'vip' => $pdo->query("SELECT COUNT(*) FROM kullanicilar WHERE uyelik_tipi = 'vip'")->fetchColumn() ?: 0,
-        'bugun' => $pdo->query("SELECT COUNT(*) FROM kullanicilar WHERE DATE(kayit_tarihi) = CURDATE()")->fetchColumn() ?: 0
-    ];
+    // Önce tablo varlığını kontrol et
+    $table_check = $pdo->query("SHOW TABLES LIKE 'kullanicilar'")->fetch();
+    if ($table_check) {
+        $stats['kullanicilar'] = [
+            'toplam' => (int)$pdo->query("SELECT COUNT(*) FROM kullanicilar")->fetchColumn(),
+            'aktif' => (int)$pdo->query("SELECT COUNT(*) FROM kullanicilar WHERE durum = 'aktif'")->fetchColumn(),
+            'premium' => (int)$pdo->query("SELECT COUNT(*) FROM kullanicilar WHERE uyelik_tipi = 'premium'")->fetchColumn(),
+            'vip' => (int)$pdo->query("SELECT COUNT(*) FROM kullanicilar WHERE uyelik_tipi = 'vip'")->fetchColumn(),
+            'bugun' => (int)$pdo->query("SELECT COUNT(*) FROM kullanicilar WHERE DATE(kayit_tarihi) = CURDATE()")->fetchColumn()
+        ];
+    } else {
+        $stats['kullanicilar'] = ['toplam' => 0, 'aktif' => 0, 'premium' => 0, 'vip' => 0, 'bugun' => 0];
+    }
 } catch (PDOException $e) {
     $stats['kullanicilar'] = ['toplam' => 0, 'aktif' => 0, 'premium' => 0, 'vip' => 0, 'bugun' => 0];
 }
