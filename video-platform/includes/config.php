@@ -5,8 +5,13 @@
  * Modern Video Paylaşım Platformu
  */
 
-// Oturum başlat
+// Session ayarlarını önce yap, sonra başlat
 if (session_status() == PHP_SESSION_NONE) {
+    // Session ayarları - session başlamadan önce
+    ini_set('session.cookie_httponly', 1);
+    ini_set('session.cookie_secure', 0); // HTTPS için 1 yapın
+    ini_set('session.use_strict_mode', 1);
+    
     session_start();
 }
 

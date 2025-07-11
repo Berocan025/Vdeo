@@ -78,10 +78,12 @@ if (defined('WP_DEBUG') && WP_DEBUG) {
 // Zaman Dilimi
 date_default_timezone_set('Europe/Istanbul');
 
-// Session ayarları
-ini_set('session.cookie_httponly', 1);
-ini_set('session.cookie_secure', 0); // HTTPS için 1 yapın
-ini_set('session.use_strict_mode', 1);
+// Session ayarları - Sadece session başlamadan önce
+if (session_status() == PHP_SESSION_NONE) {
+    ini_set('session.cookie_httponly', 1);
+    ini_set('session.cookie_secure', 0); // HTTPS için 1 yapın
+    ini_set('session.use_strict_mode', 1);
+}
 
 // Bellek limiti
 ini_set('memory_limit', '256M');

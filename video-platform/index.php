@@ -8,6 +8,27 @@
 
 require_once 'includes/config.php';
 
+// Kritik tabloları kontrol et
+try {
+    $pdo->query("SELECT 1 FROM videolar LIMIT 1");
+    $pdo->query("SELECT 1 FROM kategoriler LIMIT 1");
+    $pdo->query("SELECT 1 FROM kullanicilar LIMIT 1");
+} catch (PDOException $e) {
+    // Tablolar eksikse kuruluma yönlendir
+    if (!file_exists('config/config.php')) {
+        header('Location: install.php');
+        exit;
+    }
+    // Config varsa ama tablolar eksikse uyarı ver
+    die('
+    <div style="font-family: Arial; background: #1a1f2e; color: #fff; padding: 50px; text-align: center;">
+        <h2>⚠️ Veritabanı Hatası</h2>
+        <p>Bazı veritabanı tabloları eksik. Lütfen kurulumu tekrar çalıştırın.</p>
+        <p><a href="install.php" style="color: #ff6b35; text-decoration: none; background: #333; padding: 10px 20px; border-radius: 5px;">Kurulumu Çalıştır</a></p>
+    </div>
+    ');
+}
+
 // Sayfa bilgileri
 $page_title = "Ana Sayfa";
 $page_description = "DOBİEN Video Platform - En kaliteli video içerikleri, premium üyelik avantajları ve 4K video deneyimi";
@@ -21,73 +42,103 @@ $videos_per_page = 12;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $offset = ($page - 1) * $videos_per_page;
 
-// Slider verilerini çek
-$slider_query = "SELECT * FROM slider WHERE durum = 'aktif' ORDER BY siralama ASC, id DESC LIMIT 5";
-$slider_result = $pdo->query($slider_query);
-$slider_items = $slider_result->fetchAll();
+// Slider verilerini çek - Güvenli hata yakalama
+$slider_items = [];
+try {
+    $slider_query = "SELECT * FROM slider WHERE durum = 'aktif' ORDER BY siralama ASC, id DESC LIMIT 5";
+    $slider_result = $pdo->query($slider_query);
+    $slider_items = $slider_result->fetchAll();
+} catch (PDOException $e) {
+    // Slider tablosu yoksa boş dizi kullan
+    $slider_items = [];
+}
 
-// Son eklenen videolar
-$recent_videos_query = "
-    SELECT v.*, k.kategori_adi, k.slug as kategori_slug
-    FROM videolar v 
-    LEFT JOIN kategoriler k ON v.kategori_id = k.id 
-    WHERE v.durum = 'aktif' 
-    AND (v.goruntulenme_yetkisi = 'herkes' OR ? != '')
-    ORDER BY v.ekleme_tarihi DESC 
-    LIMIT $videos_per_page OFFSET $offset
-";
-$recent_videos = $pdo->prepare($recent_videos_query);
-$recent_videos->execute([$current_user ? $current_user['uyelik_tipi'] : '']);
-$recent_videos = $recent_videos->fetchAll();
-
-// Popüler videolar
-$popular_videos_query = "
-    SELECT v.*, k.kategori_adi, k.slug as kategori_slug
-    FROM videolar v 
-    LEFT JOIN kategoriler k ON v.kategori_id = k.id 
-    WHERE v.durum = 'aktif' 
-    AND (v.goruntulenme_yetkisi = 'herkes' OR ? != '')
-    AND v.ozellik = 'populer'
-    ORDER BY v.izlenme_sayisi DESC 
-    LIMIT 8
-";
-$popular_videos = $pdo->prepare($popular_videos_query);
-$popular_videos->execute([$current_user ? $current_user['uyelik_tipi'] : '']);
-$popular_videos = $popular_videos->fetchAll();
-
-// Premium videolar (sadece premium üyeler için)
-$premium_videos = [];
-if ($current_user && $current_user['uyelik_tipi'] == 'premium') {
-    $premium_videos_query = "
+// Son eklenen videolar - Güvenli hata yakalama
+$recent_videos = [];
+try {
+    $recent_videos_query = "
         SELECT v.*, k.kategori_adi, k.slug as kategori_slug
         FROM videolar v 
         LEFT JOIN kategoriler k ON v.kategori_id = k.id 
         WHERE v.durum = 'aktif' 
-        AND v.goruntulenme_yetkisi = 'premium'
+        AND (v.goruntulenme_yetkisi = 'herkes' OR ? != '')
         ORDER BY v.ekleme_tarihi DESC 
-        LIMIT 6
+        LIMIT $videos_per_page OFFSET $offset
     ";
-    $premium_videos = $pdo->query($premium_videos_query)->fetchAll();
+    $recent_videos_stmt = $pdo->prepare($recent_videos_query);
+    $recent_videos_stmt->execute([$current_user ? $current_user['uyelik_tipi'] : '']);
+    $recent_videos = $recent_videos_stmt->fetchAll();
+} catch (PDOException $e) {
+    // Videolar tablosu yoksa boş dizi
+    $recent_videos = [];
+}
+
+// Popüler videolar - Güvenli hata yakalama
+$popular_videos = [];
+try {
+    $popular_videos_query = "
+        SELECT v.*, k.kategori_adi, k.slug as kategori_slug
+        FROM videolar v 
+        LEFT JOIN kategoriler k ON v.kategori_id = k.id 
+        WHERE v.durum = 'aktif' 
+        AND (v.goruntulenme_yetkisi = 'herkes' OR ? != '')
+        AND v.ozellik = 'populer'
+        ORDER BY v.izlenme_sayisi DESC 
+        LIMIT 8
+    ";
+    $popular_videos_stmt = $pdo->prepare($popular_videos_query);
+    $popular_videos_stmt->execute([$current_user ? $current_user['uyelik_tipi'] : '']);
+    $popular_videos = $popular_videos_stmt->fetchAll();
+} catch (PDOException $e) {
+    $popular_videos = [];
+}
+
+// Premium videolar (sadece premium üyeler için)
+$premium_videos = [];
+if ($current_user && $current_user['uyelik_tipi'] == 'premium') {
+    try {
+        $premium_videos_query = "
+            SELECT v.*, k.kategori_adi, k.slug as kategori_slug
+            FROM videolar v 
+            LEFT JOIN kategoriler k ON v.kategori_id = k.id 
+            WHERE v.durum = 'aktif' 
+            AND v.goruntulenme_yetkisi = 'premium'
+            ORDER BY v.ekleme_tarihi DESC 
+            LIMIT 6
+        ";
+        $premium_videos = $pdo->query($premium_videos_query)->fetchAll();
+    } catch (PDOException $e) {
+        $premium_videos = [];
+    }
 }
 
 // VIP videolar (VIP ve Premium üyeler için)
 $vip_videos = [];
 if ($current_user && ($current_user['uyelik_tipi'] == 'vip' || $current_user['uyelik_tipi'] == 'premium')) {
-    $vip_videos_query = "
-        SELECT v.*, k.kategori_adi, k.slug as kategori_slug
-        FROM videolar v 
-        LEFT JOIN kategoriler k ON v.kategori_id = k.id 
-        WHERE v.durum = 'aktif' 
-        AND v.goruntulenme_yetkisi IN ('vip', 'premium')
-        ORDER BY v.ekleme_tarihi DESC 
-        LIMIT 6
-    ";
-    $vip_videos = $pdo->query($vip_videos_query)->fetchAll();
+    try {
+        $vip_videos_query = "
+            SELECT v.*, k.kategori_adi, k.slug as kategori_slug
+            FROM videolar v 
+            LEFT JOIN kategoriler k ON v.kategori_id = k.id 
+            WHERE v.durum = 'aktif' 
+            AND v.goruntulenme_yetkisi IN ('vip', 'premium')
+            ORDER BY v.ekleme_tarihi DESC 
+            LIMIT 6
+        ";
+        $vip_videos = $pdo->query($vip_videos_query)->fetchAll();
+    } catch (PDOException $e) {
+        $vip_videos = [];
+    }
 }
 
-// Kategoriler
-$categories_query = "SELECT * FROM kategoriler WHERE durum = 'aktif' ORDER BY siralama ASC, kategori_adi ASC LIMIT 8";
-$categories = $pdo->query($categories_query)->fetchAll();
+// Kategoriler - Güvenli hata yakalama
+$categories = [];
+try {
+    $categories_query = "SELECT * FROM kategoriler WHERE durum = 'aktif' ORDER BY siralama ASC, kategori_adi ASC LIMIT 8";
+    $categories = $pdo->query($categories_query)->fetchAll();
+} catch (PDOException $e) {
+    $categories = [];
+}
 
 // Video kalitesi belirleme fonksiyonu
 function getVideoQuality($membership_required) {

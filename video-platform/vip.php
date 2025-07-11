@@ -10,6 +10,15 @@ require_once 'includes/config.php';
 $page_title = "VIP Videolar";
 $page_description = "VIP üyeler için özel video içerikleri - DOBİEN Video Platform";
 
+// Veritabanı tablolarını kontrol et
+try {
+    $pdo->query("SELECT 1 FROM videolar LIMIT 1");
+    $pdo->query("SELECT 1 FROM kategoriler LIMIT 1");
+} catch (PDOException $e) {
+    header('Location: install.php');
+    exit;
+}
+
 // VIP kontrolü
 if (!$current_user || ($current_user['uyelik_tipi'] != 'vip' && $current_user['uyelik_tipi'] != 'premium')) {
     // VIP değilse yönlendir

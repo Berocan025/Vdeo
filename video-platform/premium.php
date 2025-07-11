@@ -10,6 +10,15 @@ require_once 'includes/config.php';
 $page_title = "Premium Videolar";
 $page_description = "Premium üyeler için 4K kalite özel video içerikleri - DOBİEN Video Platform";
 
+// Veritabanı tablolarını kontrol et
+try {
+    $pdo->query("SELECT 1 FROM videolar LIMIT 1");
+    $pdo->query("SELECT 1 FROM kategoriler LIMIT 1");
+} catch (PDOException $e) {
+    header('Location: install.php');
+    exit;
+}
+
 // Premium kontrolü
 if (!$current_user || $current_user['uyelik_tipi'] != 'premium') {
     // Premium değilse yönlendir
