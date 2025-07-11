@@ -52,6 +52,31 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             }
         }
         
+        // Ekstra kritik tabloları kontrol et ve oluştur
+        $critical_tables = [
+            "CREATE TABLE IF NOT EXISTS `slider` (
+                `id` int(11) NOT NULL AUTO_INCREMENT,
+                `baslik` varchar(255) NOT NULL,
+                `aciklama` text,
+                `resim` varchar(255) NOT NULL,
+                `link` varchar(255) DEFAULT NULL,
+                `buton_metni` varchar(50) DEFAULT NULL,
+                `siralama` int(11) NOT NULL DEFAULT '0',
+                `durum` enum('aktif','pasif') NOT NULL DEFAULT 'aktif',
+                `olusturma_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `guncelleme_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (`id`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        ];
+        
+        foreach ($critical_tables as $table_sql) {
+            try {
+                $pdo->exec($table_sql);
+            } catch (PDOException $e) {
+                error_log("Critical table creation error: " . $e->getMessage());
+            }
+        }
+        
         // Manuel olarak temel tabloları oluştur (yedek plan)
         $core_tables = "
         CREATE TABLE IF NOT EXISTS `admin_kullanicilar` (

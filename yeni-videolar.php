@@ -15,6 +15,15 @@ $videos_per_page = 20;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $offset = ($page - 1) * $videos_per_page;
 
+// Veritabanı tablolarını kontrol et
+try {
+    $pdo->query("SELECT 1 FROM videolar LIMIT 1");
+    $pdo->query("SELECT 1 FROM kategoriler LIMIT 1");
+} catch (PDOException $e) {
+    header('Location: install.php');
+    exit;
+}
+
 // Yeni videoları çek
 try {
     $videos_query = "
