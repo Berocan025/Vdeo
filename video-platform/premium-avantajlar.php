@@ -1,696 +1,538 @@
 <?php
 /**
- * DOBİEN Video Platform - Premium Avantajlar Sayfası
+ * DOBİEN Video Platform - Premium Avantajları
  * Geliştirici: DOBİEN
- * Premium Üyelik Avantajları
- * Tüm Hakları Saklıdır © DOBİEN
+ * Modern Video Paylaşım Platformu
  */
 
 require_once 'includes/config.php';
 
-$page_title = "Premium Avantajlar";
-$page_description = "DOBİEN Video Platform Premium üyelik avantajları - 4K video kalitesi, sınırsız erişim ve özel içerikler";
-$page_keywords = "premium avantajlar, 4k video, vip üyelik, premium üyelik, DOBİEN";
+$page_title = "Premium Avantajları - " . $site_settings['site_adi'];
+$page_description = "Premium üyelik avantajlarını keşfedin. 4K video kalitesi, reklamsız izleme, sınırsız indirme ve daha fazlası!";
 
-include 'includes/header.php';
+// Premium planları
+$premium_plans = [
+    'monthly' => [
+        'name' => 'Aylık Premium',
+        'price' => '29.99',
+        'duration' => '30 gün',
+        'savings' => null
+    ],
+    'yearly' => [
+        'name' => 'Yıllık Premium',
+        'price' => '299.99',
+        'duration' => '365 gün',
+        'savings' => '60.00'
+    ]
+];
+
+// Premium avantajları
+$premium_features = [
+    [
+        'icon' => 'fas fa-video',
+        'title' => '4K Ultra HD Kalite',
+        'description' => 'Tüm videoları 4K Ultra HD kalitede izleyin. Kristal netliğinde görüntü deneyimi yaşayın.'
+    ],
+    [
+        'icon' => 'fas fa-ad',
+        'title' => 'Reklamsız İzleme',
+        'description' => 'Hiçbir reklam molası olmadan kesintisiz video izleme deneyimi.'
+    ],
+    [
+        'icon' => 'fas fa-download',
+        'title' => 'Sınırsız İndirme',
+        'description' => 'İstediğiniz videoları cihazınıza indirin ve çevrimdışı izleyin.'
+    ],
+    [
+        'icon' => 'fas fa-crown',
+        'title' => 'Özel Premium İçerik',
+        'description' => 'Sadece premium üyeler için hazırlanan özel video içeriklerine erişin.'
+    ],
+    [
+        'icon' => 'fas fa-forward',
+        'title' => 'Erken Erişim',
+        'description' => 'Yeni çıkan videolara diğer kullanıcılardan önce erişim sağlayın.'
+    ],
+    [
+        'icon' => 'fas fa-headset',
+        'title' => 'Öncelikli Destek',
+        'description' => '7/24 öncelikli müşteri desteği ve canlı yardım hizmeti.'
+    ],
+    [
+        'icon' => 'fas fa-users',
+        'title' => 'Çoklu Cihaz Desteği',
+        'description' => 'Aynı anda 5 farklı cihazda Premium hesabınızı kullanın.'
+    ],
+    [
+        'icon' => 'fas fa-sync-alt',
+        'title' => 'Otomatik Senkronizasyon',
+        'description' => 'İzleme geçmişiniz ve favorileriniz tüm cihazlarınızda senkronize.'
+    ]
+];
+
+// Kullanıcı üyelik kontrolü
+$user_membership = $current_user ? $current_user['uyelik_tipi'] : 'guest';
+$is_premium = $user_membership === 'premium';
+
 ?>
 
-<div class="container">
-    <!-- Hero Section -->
-    <section class="advantages-hero">
-        <div class="hero-content">
-            <div class="hero-text">
-                <h1>
-                    <i class="fas fa-crown"></i>
-                    Premium Avantajları Keşfedin
-                </h1>
-                <p class="hero-subtitle">
-                    En kaliteli video deneyimi için tasarlanmış özel avantajlarla video izleme deneyiminizi zirveye taşıyın
-                </p>
-            </div>
-            <div class="hero-image">
-                <div class="floating-cards">
-                    <div class="advantage-card">
-                        <i class="fas fa-video"></i>
-                        <span>4K Ultra HD</span>
-                    </div>
-                    <div class="advantage-card">
-                        <i class="fas fa-infinity"></i>
-                        <span>Sınırsız İzleme</span>
-                    </div>
-                    <div class="advantage-card">
-                        <i class="fas fa-ad"></i>
-                        <span>Reklamsız</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Üyelik Planları Karşılaştırması -->
-    <section class="membership-comparison">
-        <div class="section-header">
-            <h2 class="section-title">
-                <i class="fas fa-balance-scale"></i>
-                Üyelik Planları Karşılaştırması
-            </h2>
-            <p>Size en uygun planı seçin ve video deneyiminizi geliştirin</p>
-        </div>
-
-        <div class="comparison-table">
-            <div class="plan-column basic">
-                <div class="plan-header">
-                    <h3>
-                        <i class="fas fa-user"></i>
-                        Ücretsiz
-                    </h3>
-                    <div class="price">
-                        <span class="amount">₺0</span>
-                        <span class="period">/ay</span>
-                    </div>
-                </div>
-                <div class="plan-features">
-                    <div class="feature">
-                        <i class="fas fa-check text-success"></i>
-                        <span>720p Video Kalitesi</span>
-                    </div>
-                    <div class="feature">
-                        <i class="fas fa-check text-success"></i>
-                        <span>Sınırlı İçerik Erişimi</span>
-                    </div>
-                    <div class="feature">
-                        <i class="fas fa-times text-danger"></i>
-                        <span>Reklamlar Var</span>
-                    </div>
-                    <div class="feature">
-                        <i class="fas fa-times text-danger"></i>
-                        <span>Premium İçerik Yok</span>
-                    </div>
-                    <div class="feature">
-                        <i class="fas fa-times text-danger"></i>
-                        <span>4K Kalite Yok</span>
-                    </div>
-                </div>
-                <div class="plan-action">
-                    <button class="btn btn-outline" disabled>Mevcut Plan</button>
-                </div>
-            </div>
-
-            <div class="plan-column vip">
-                <div class="plan-header">
-                    <h3>
-                        <i class="fas fa-crown"></i>
-                        VIP
-                    </h3>
-                    <div class="price">
-                        <span class="amount">₺19.99</span>
-                        <span class="period">/ay</span>
-                    </div>
-                    <div class="plan-badge">Popüler</div>
-                </div>
-                <div class="plan-features">
-                    <div class="feature">
-                        <i class="fas fa-check text-success"></i>
-                        <span>1080p Full HD Kalite</span>
-                    </div>
-                    <div class="feature">
-                        <i class="fas fa-check text-success"></i>
-                        <span>VIP İçeriklere Erişim</span>
-                    </div>
-                    <div class="feature">
-                        <i class="fas fa-check text-success"></i>
-                        <span>Daha Az Reklam</span>
-                    </div>
-                    <div class="feature">
-                        <i class="fas fa-check text-success"></i>
-                        <span>Öncelikli Destek</span>
-                    </div>
-                    <div class="feature">
-                        <i class="fas fa-times text-danger"></i>
-                        <span>Premium İçerik Sınırlı</span>
-                    </div>
-                </div>
-                <div class="plan-action">
-                    <a href="<?php echo siteUrl('uyelik-yukselt.php?plan=vip'); ?>" class="btn btn-vip">
-                        VIP Ol
-                    </a>
-                </div>
-            </div>
-
-            <div class="plan-column premium recommended">
-                <div class="plan-header">
-                    <h3>
-                        <i class="fas fa-gem"></i>
-                        Premium
-                    </h3>
-                    <div class="price">
-                        <span class="amount">₺29.99</span>
-                        <span class="period">/ay</span>
-                    </div>
-                    <div class="plan-badge premium">Önerilen</div>
-                </div>
-                <div class="plan-features">
-                    <div class="feature">
-                        <i class="fas fa-check text-success"></i>
-                        <span>4K Ultra HD Kalite</span>
-                    </div>
-                    <div class="feature">
-                        <i class="fas fa-check text-success"></i>
-                        <span>Tüm İçeriklere Erişim</span>
-                    </div>
-                    <div class="feature">
-                        <i class="fas fa-check text-success"></i>
-                        <span>Tamamen Reklamsız</span>
-                    </div>
-                    <div class="feature">
-                        <i class="fas fa-check text-success"></i>
-                        <span>Özel Premium İçerikler</span>
-                    </div>
-                    <div class="feature">
-                        <i class="fas fa-check text-success"></i>
-                        <span>7/24 VIP Destek</span>
-                    </div>
-                </div>
-                <div class="plan-action">
-                    <a href="<?php echo siteUrl('uyelik-yukselt.php?plan=premium'); ?>" class="btn btn-premium">
-                        Premium Ol
-                    </a>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Detaylı Avantajlar -->
-    <section class="detailed-advantages">
-        <div class="section-header">
-            <h2 class="section-title">
-                <i class="fas fa-star"></i>
-                Premium Avantajlar Detayı
-            </h2>
-        </div>
-
-        <div class="advantages-grid">
-            <div class="advantage-item">
-                <div class="advantage-icon">
-                    <i class="fas fa-video"></i>
-                </div>
-                <div class="advantage-content">
-                    <h3>4K Ultra HD Video Kalitesi</h3>
-                    <p>En yüksek video kalitesi ile kristal berraklığında görüntü deneyimi yaşayın. Her detay gözünüzün önünde.</p>
-                    <ul>
-                        <li>3840x2160 çözünürlük</li>
-                        <li>HDR desteği</li>
-                        <li>Gelişmiş ses kalitesi</li>
-                    </ul>
-                </div>
-            </div>
-
-            <div class="advantage-item">
-                <div class="advantage-icon">
-                    <i class="fas fa-infinity"></i>
-                </div>
-                <div class="advantage-content">
-                    <h3>Sınırsız Video İzleme</h3>
-                    <p>Hiçbir kısıtlama olmadan, istediğiniz kadar video izleyebilir, favori içeriklerinizi tekrar tekrar izleyebilirsiniz.</p>
-                    <ul>
-                        <li>Zaman sınırı yok</li>
-                        <li>İzleme sayısı limiti yok</li>
-                        <li>Offline izleme desteği</li>
-                    </ul>
-                </div>
-            </div>
-
-            <div class="advantage-item">
-                <div class="advantage-icon">
-                    <i class="fas fa-ad"></i>
-                </div>
-                <div class="advantage-content">
-                    <h3>Tamamen Reklamsız Deneyim</h3>
-                    <p>Hiçbir reklam kesintisi olmadan video izleme keyfini çıkarın. Odaklanın, rahatlayın ve izleyin.</p>
-                    <ul>
-                        <li>Pre-roll reklamları yok</li>
-                        <li>Mid-roll reklamları yok</li>
-                        <li>Popup reklamları yok</li>
-                    </ul>
-                </div>
-            </div>
-
-            <div class="advantage-item">
-                <div class="advantage-icon">
-                    <i class="fas fa-gem"></i>
-                </div>
-                <div class="advantage-content">
-                    <h3>Özel Premium İçerikler</h3>
-                    <p>Sadece Premium üyeler için hazırlanmış özel içeriklere erişim. En yeni ve en kaliteli videolar önce size gelsin.</p>
-                    <ul>
-                        <li>Özel çekimler</li>
-                        <li>Behind the scenes içerikler</li>
-                        <li>Erken erişim videoları</li>
-                    </ul>
-                </div>
-            </div>
-
-            <div class="advantage-item">
-                <div class="advantage-icon">
-                    <i class="fas fa-headset"></i>
-                </div>
-                <div class="advantage-content">
-                    <h3>7/24 VIP Destek</h3>
-                    <p>Her an yanınızda olan profesyonel destek ekibimiz. Sorularınız için hızlı ve etkili çözümler.</p>
-                    <ul>
-                        <li>Canlı chat desteği</li>
-                        <li>Öncelikli ticket sistemi</li>
-                        <li>Telefon desteği</li>
-                    </ul>
-                </div>
-            </div>
-
-            <div class="advantage-item">
-                <div class="advantage-icon">
-                    <i class="fas fa-download"></i>
-                </div>
-                <div class="advantage-content">
-                    <h3>Offline İzleme</h3>
-                    <p>Videoları indirerek internet bağlantısı olmadan da izleyebilirsiniz. Seyahat ederken bile eğlence devam eder.</p>
-                    <ul>
-                        <li>Yüksek kalitede indirme</li>
-                        <li>Çoklu cihaz desteği</li>
-                        <li>Otomatik senkronizasyon</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Sık Sorulan Sorular -->
-    <section class="faq-section">
-        <div class="section-header">
-            <h2 class="section-title">
-                <i class="fas fa-question-circle"></i>
-                Sık Sorulan Sorular
-            </h2>
-        </div>
-
-        <div class="faq-container">
-            <div class="faq-item">
-                <div class="faq-question">
-                    <h3>Premium üyeliği nasıl iptal edebilirim?</h3>
-                    <i class="fas fa-chevron-down"></i>
-                </div>
-                <div class="faq-answer">
-                    <p>Premium üyeliğinizi istediğiniz zaman hesap ayarlarından iptal edebilirsiniz. İptal etmeniz durumunda mevcut dönem sonuna kadar Premium avantajlarınızdan yararlanmaya devam edersiniz.</p>
-                </div>
-            </div>
-
-            <div class="faq-item">
-                <div class="faq-question">
-                    <h3>Deneme süresi var mı?</h3>
-                    <i class="fas fa-chevron-down"></i>
-                </div>
-                <div class="faq-answer">
-                    <p>Evet! Yeni üyelerimiz için 7 günlük ücretsiz deneme süresi sunuyoruz. Bu süre zarfında tüm Premium özelliklerden ücretsiz yararlanabilirsiniz.</p>
-                </div>
-            </div>
-
-            <div class="faq-item">
-                <div class="faq-question">
-                    <h3>Birden fazla cihazda kullanabilir miyim?</h3>
-                    <i class="fas fa-chevron-down"></i>
-                </div>
-                <div class="faq-answer">
-                    <p>Premium hesabınızla 5 farklı cihazda aynı anda oturum açabilir ve aynı anda 2 cihazda izleyebilirsiniz.</p>
-                </div>
-            </div>
-
-            <div class="faq-item">
-                <div class="faq-question">
-                    <h3>VIP'den Premium'a nasıl geçiş yapabilirim?</h3>
-                    <i class="fas fa-chevron-down"></i>
-                </div>
-                <div class="faq-answer">
-                    <p>VIP üyeliğiniz varken Premium'a geçiş yapabilirsiniz. Fark ücreti otomatik olarak hesaplanır ve kalan süreniz Premium üyeliğe dönüştürülür.</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- CTA Section -->
-    <section class="final-cta">
-        <div class="cta-content">
-            <h2>
-                <i class="fas fa-rocket"></i>
-                Şimdi Premium Deneyimi Başlatın!
-            </h2>
-            <p>En kaliteli video deneyimi için Premium üyeliğe geçin ve farkı hemen hissedin.</p>
-            <div class="cta-buttons">
-                <a href="<?php echo siteUrl('uyelik-yukselt.php?plan=premium'); ?>" class="btn btn-premium btn-large">
-                    <i class="fas fa-gem"></i>
-                    Premium Ol - ₺29.99/ay
-                </a>
-                <a href="<?php echo siteUrl('uyelik-yukselt.php?plan=vip'); ?>" class="btn btn-vip btn-large">
-                    <i class="fas fa-crown"></i>
-                    VIP Ol - ₺19.99/ay
-                </a>
-            </div>
-            <p class="guarantee">
-                <i class="fas fa-shield-alt"></i>
-                7 gün para iade garantisi
-            </p>
-        </div>
-    </section>
-</div>
-
-<style>
-.advantages-hero {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    padding: 80px 0;
-    margin-bottom: 50px;
-    border-radius: 15px;
-    color: white;
-}
-
-.hero-content {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 50px;
-}
-
-.hero-text h1 {
-    font-size: 3rem;
-    margin-bottom: 20px;
-    font-weight: 700;
-}
-
-.hero-subtitle {
-    font-size: 1.2rem;
-    opacity: 0.9;
-    line-height: 1.6;
-}
-
-.floating-cards {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-
-.advantage-card {
-    background: rgba(255,255,255,0.1);
-    padding: 20px;
-    border-radius: 10px;
-    backdrop-filter: blur(10px);
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    animation: float 3s ease-in-out infinite;
-}
-
-.advantage-card:nth-child(2) {
-    animation-delay: -1s;
-}
-
-.advantage-card:nth-child(3) {
-    animation-delay: -2s;
-}
-
-@keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-10px); }
-}
-
-.comparison-table {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 30px;
-    margin: 50px 0;
-}
-
-.plan-column {
-    background: var(--card-bg);
-    border-radius: 15px;
-    padding: 30px;
-    border: 2px solid transparent;
-    position: relative;
-    transition: all 0.3s ease;
-}
-
-.plan-column:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-}
-
-.plan-column.recommended {
-    border-color: #ff6b35;
-    transform: scale(1.05);
-}
-
-.plan-header h3 {
-    font-size: 1.5rem;
-    margin-bottom: 15px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.price {
-    margin-bottom: 30px;
-}
-
-.price .amount {
-    font-size: 2.5rem;
-    font-weight: 700;
-    color: #ff6b35;
-}
-
-.price .period {
-    font-size: 1rem;
-    opacity: 0.7;
-}
-
-.plan-badge {
-    position: absolute;
-    top: -10px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: #ff6b35;
-    color: white;
-    padding: 5px 20px;
-    border-radius: 20px;
-    font-size: 0.8rem;
-    font-weight: 600;
-}
-
-.plan-badge.premium {
-    background: linear-gradient(45deg, #ff6b35, #f7931e);
-}
-
-.plan-features {
-    margin-bottom: 30px;
-}
-
-.feature {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 10px;
-}
-
-.text-success { color: #28a745; }
-.text-danger { color: #dc3545; }
-
-.btn-vip {
-    background: linear-gradient(45deg, #6c5ce7, #a29bfe);
-    color: white;
-    border: none;
-}
-
-.btn-premium {
-    background: linear-gradient(45deg, #ff6b35, #f7931e);
-    color: white;
-    border: none;
-}
-
-.advantages-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-    gap: 30px;
-    margin: 50px 0;
-}
-
-.advantage-item {
-    background: var(--card-bg);
-    padding: 30px;
-    border-radius: 15px;
-    transition: all 0.3s ease;
-}
-
-.advantage-item:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 15px 30px rgba(0,0,0,0.2);
-}
-
-.advantage-icon {
-    width: 60px;
-    height: 60px;
-    background: linear-gradient(45deg, #ff6b35, #f7931e);
-    border-radius: 15px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.5rem;
-    color: white;
-    margin-bottom: 20px;
-}
-
-.advantage-content h3 {
-    font-size: 1.3rem;
-    margin-bottom: 15px;
-    color: #ff6b35;
-}
-
-.advantage-content ul {
-    margin-top: 15px;
-    padding-left: 20px;
-}
-
-.advantage-content li {
-    margin-bottom: 5px;
-    opacity: 0.8;
-}
-
-.faq-container {
-    max-width: 800px;
-    margin: 0 auto;
-}
-
-.faq-item {
-    background: var(--card-bg);
-    margin-bottom: 15px;
-    border-radius: 10px;
-    overflow: hidden;
-}
-
-.faq-question {
-    padding: 20px;
-    cursor: pointer;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    transition: all 0.3s ease;
-}
-
-.faq-question:hover {
-    background: rgba(255,107,53,0.1);
-}
-
-.faq-answer {
-    padding: 0 20px;
-    max-height: 0;
-    overflow: hidden;
-    transition: all 0.3s ease;
-}
-
-.faq-item.active .faq-answer {
-    padding: 20px;
-    max-height: 200px;
-}
-
-.final-cta {
-    background: linear-gradient(135deg, #1a1f2e 0%, #16213e 100%);
-    padding: 80px 0;
-    text-align: center;
-    border-radius: 15px;
-    margin: 50px 0;
-}
-
-.cta-content h2 {
-    font-size: 2.5rem;
-    margin-bottom: 20px;
-    color: white;
-}
-
-.cta-content p {
-    font-size: 1.2rem;
-    margin-bottom: 40px;
-    color: rgba(255,255,255,0.8);
-}
-
-.cta-buttons {
-    display: flex;
-    gap: 20px;
-    justify-content: center;
-    margin-bottom: 30px;
-    flex-wrap: wrap;
-}
-
-.btn-large {
-    padding: 15px 30px;
-    font-size: 1.1rem;
-    font-weight: 600;
-}
-
-.guarantee {
-    color: rgba(255,255,255,0.7);
-    font-size: 0.9rem;
-}
-
-@media (max-width: 768px) {
-    .hero-content {
-        flex-direction: column;
-        text-align: center;
-    }
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><?php echo htmlspecialchars($page_title); ?></title>
+    <meta name="description" content="<?php echo htmlspecialchars($page_description); ?>">
+    <meta name="keywords" content="premium üyelik, 4k video, reklamsız izleme, video indirme, DOBİEN">
     
-    .hero-text h1 {
-        font-size: 2rem;
-    }
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="assets/css/style.css" rel="stylesheet">
     
-    .advantages-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .comparison-table {
-        grid-template-columns: 1fr;
-    }
-    
-    .plan-column.recommended {
-        transform: none;
-    }
-    
-    .cta-buttons {
-        flex-direction: column;
-        align-items: center;
-    }
-}
-</style>
-
-<script>
-// FAQ açma/kapama
-document.querySelectorAll('.faq-question').forEach(question => {
-    question.addEventListener('click', () => {
-        const faqItem = question.parentElement;
-        const isActive = faqItem.classList.contains('active');
+    <style>
+        :root {
+            --premium-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --premium-gold: #ffd700;
+            --premium-dark: #2c3e50;
+        }
         
-        // Tüm FAQ'ları kapat
-        document.querySelectorAll('.faq-item').forEach(item => {
-            item.classList.remove('active');
+        .hero-section {
+            background: var(--premium-gradient);
+            color: white;
+            padding: 100px 0;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="2" fill="rgba(255,255,255,0.1)"/><circle cx="75" cy="75" r="1" fill="rgba(255,255,255,0.05)"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+            opacity: 0.3;
+        }
+        
+        .hero-content {
+            position: relative;
+            z-index: 2;
+        }
+        
+        .premium-crown {
+            font-size: 4rem;
+            color: var(--premium-gold);
+            margin-bottom: 20px;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+        
+        @keyframes glow {
+            from { text-shadow: 0 0 20px rgba(255, 215, 0, 0.5); }
+            to { text-shadow: 0 0 30px rgba(255, 215, 0, 0.8); }
+        }
+        
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-top: 60px;
+        }
+        
+        .feature-card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px 30px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            border: 3px solid transparent;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-10px);
+            border-color: var(--premium-gold);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+        }
+        
+        .feature-icon {
+            font-size: 3rem;
+            color: var(--premium-gold);
+            margin-bottom: 20px;
+        }
+        
+        .pricing-section {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 80px 0;
+        }
+        
+        .pricing-card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px 30px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .pricing-card.featured {
+            transform: scale(1.05);
+            border: 3px solid var(--premium-gold);
+        }
+        
+        .pricing-card.featured::before {
+            content: 'En Popüler';
+            position: absolute;
+            top: 20px;
+            right: -30px;
+            background: var(--premium-gold);
+            color: var(--premium-dark);
+            padding: 5px 40px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            transform: rotate(45deg);
+        }
+        
+        .price {
+            font-size: 3rem;
+            font-weight: bold;
+            color: var(--premium-dark);
+            margin: 20px 0;
+        }
+        
+        .savings {
+            background: #28a745;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            margin-top: 10px;
+            display: inline-block;
+        }
+        
+        .premium-btn {
+            background: var(--premium-gradient);
+            border: none;
+            color: white;
+            padding: 15px 40px;
+            border-radius: 50px;
+            font-weight: bold;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .premium-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+            color: white;
+        }
+        
+        .comparison-section {
+            padding: 80px 0;
+        }
+        
+        .comparison-table {
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .comparison-table th {
+            background: var(--premium-gradient);
+            color: white;
+            padding: 20px;
+            border: none;
+        }
+        
+        .comparison-table td {
+            padding: 15px 20px;
+            border-color: #f8f9fa;
+        }
+        
+        .check-icon {
+            color: #28a745;
+            font-size: 1.2rem;
+        }
+        
+        .cross-icon {
+            color: #dc3545;
+            font-size: 1.2rem;
+        }
+        
+        .cta-section {
+            background: var(--premium-gradient);
+            color: white;
+            padding: 80px 0;
+            text-align: center;
+        }
+        
+        .already-premium {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-top: 30px;
+        }
+        
+        @media (max-width: 768px) {
+            .hero-section {
+                padding: 60px 0;
+            }
+            
+            .premium-crown {
+                font-size: 3rem;
+            }
+            
+            .features-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .pricing-card.featured {
+                transform: none;
+                margin-bottom: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <?php include 'includes/header.php'; ?>
+    
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-lg-8 text-center hero-content">
+                    <div class="premium-crown">
+                        <i class="fas fa-crown"></i>
+                    </div>
+                    <h1 class="display-4 fw-bold mb-4">Premium Avantajlarını Keşfedin</h1>
+                    <p class="lead mb-4">4K kalitede video izleme, reklamsız deneyim ve özel içeriklere erişim. Premium üyelikle video deneyiminizi bir üst seviyeye taşıyın.</p>
+                    
+                    <?php if ($is_premium): ?>
+                        <div class="already-premium">
+                            <i class="fas fa-check-circle me-2"></i>
+                            <strong>Tebrikler!</strong> Zaten Premium üyesiniz ve tüm avantajlardan yararlanıyorsunuz.
+                        </div>
+                    <?php else: ?>
+                        <a href="#pricing" class="premium-btn">
+                            <i class="fas fa-crown me-2"></i>Premium'a Geç
+                        </a>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Features Section -->
+    <section class="py-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-8 mx-auto text-center mb-5">
+                    <h2 class="display-5 fw-bold">Premium Üyelik Avantajları</h2>
+                    <p class="lead text-muted">Premium üyelikle elde edeceğiniz tüm avantajları keşfedin</p>
+                </div>
+            </div>
+            
+            <div class="features-grid">
+                <?php foreach ($premium_features as $feature): ?>
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="<?php echo $feature['icon']; ?>"></i>
+                        </div>
+                        <h4 class="fw-bold mb-3"><?php echo htmlspecialchars($feature['title']); ?></h4>
+                        <p class="text-muted"><?php echo htmlspecialchars($feature['description']); ?></p>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Pricing Section -->
+    <?php if (!$is_premium): ?>
+        <section class="pricing-section" id="pricing">
+            <div class="container">
+                <div class="row">
+                    <div class="col-lg-8 mx-auto text-center mb-5">
+                        <h2 class="display-5 fw-bold">Premium Planları</h2>
+                        <p class="lead text-muted">Size en uygun planı seçin ve premium avantajlardan yararlanmaya başlayın</p>
+                    </div>
+                </div>
+                
+                <div class="row justify-content-center">
+                    <div class="col-lg-5 col-md-6 mb-4">
+                        <div class="pricing-card">
+                            <h3 class="fw-bold"><?php echo $premium_plans['monthly']['name']; ?></h3>
+                            <div class="price">₺<?php echo $premium_plans['monthly']['price']; ?></div>
+                            <p class="text-muted"><?php echo $premium_plans['monthly']['duration']; ?></p>
+                            
+                            <div class="d-grid">
+                                <a href="premium.php?plan=monthly" class="premium-btn">
+                                    <i class="fas fa-credit-card me-2"></i>Hemen Başla
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-5 col-md-6 mb-4">
+                        <div class="pricing-card featured">
+                            <h3 class="fw-bold"><?php echo $premium_plans['yearly']['name']; ?></h3>
+                            <div class="price">₺<?php echo $premium_plans['yearly']['price']; ?></div>
+                            <p class="text-muted"><?php echo $premium_plans['yearly']['duration']; ?></p>
+                            
+                            <?php if ($premium_plans['yearly']['savings']): ?>
+                                <div class="savings">
+                                    ₺<?php echo $premium_plans['yearly']['savings']; ?> Tasarruf!
+                                </div>
+                            <?php endif; ?>
+                            
+                            <div class="d-grid mt-3">
+                                <a href="premium.php?plan=yearly" class="premium-btn">
+                                    <i class="fas fa-crown me-2"></i>En İyi Seçenek
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    <?php endif; ?>
+    
+    <!-- Comparison Section -->
+    <section class="comparison-section">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-10 mx-auto">
+                    <h2 class="display-5 fw-bold text-center mb-5">Üyelik Karşılaştırması</h2>
+                    
+                    <div class="table-responsive">
+                        <table class="table comparison-table">
+                            <thead>
+                                <tr>
+                                    <th>Özellik</th>
+                                    <th class="text-center">Ücretsiz</th>
+                                    <th class="text-center">Premium</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Video Kalitesi</strong></td>
+                                    <td class="text-center">720p HD</td>
+                                    <td class="text-center">4K Ultra HD</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Reklam</strong></td>
+                                    <td class="text-center"><i class="fas fa-times cross-icon"></i></td>
+                                    <td class="text-center"><i class="fas fa-check check-icon"></i> Reklamsız</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Video İndirme</strong></td>
+                                    <td class="text-center"><i class="fas fa-times cross-icon"></i></td>
+                                    <td class="text-center"><i class="fas fa-check check-icon"></i> Sınırsız</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Özel İçerik</strong></td>
+                                    <td class="text-center"><i class="fas fa-times cross-icon"></i></td>
+                                    <td class="text-center"><i class="fas fa-check check-icon"></i></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Erken Erişim</strong></td>
+                                    <td class="text-center"><i class="fas fa-times cross-icon"></i></td>
+                                    <td class="text-center"><i class="fas fa-check check-icon"></i></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Cihaz Sayısı</strong></td>
+                                    <td class="text-center">1 Cihaz</td>
+                                    <td class="text-center">5 Cihaz</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Müşteri Desteği</strong></td>
+                                    <td class="text-center">E-posta</td>
+                                    <td class="text-center">7/24 Öncelikli</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- CTA Section -->
+    <?php if (!$is_premium): ?>
+        <section class="cta-section">
+            <div class="container">
+                <div class="row justify-content-center">
+                    <div class="col-lg-8 text-center">
+                        <h2 class="display-5 fw-bold mb-4">Premium Deneyimi Başlatın!</h2>
+                        <p class="lead mb-4">Hemen şimdi Premium'a geçin ve tüm avantajlardan yararlanmaya başlayın. İlk 7 gün ücretsiz deneme fırsatını kaçırmayın!</p>
+                        
+                        <div class="d-flex flex-column flex-md-row gap-3 justify-content-center">
+                            <a href="premium.php?plan=yearly" class="premium-btn">
+                                <i class="fas fa-crown me-2"></i>Yıllık Plan - En Avantajlı
+                            </a>
+                            <a href="premium.php?plan=monthly" class="btn btn-outline-light btn-lg">
+                                <i class="fas fa-calendar me-2"></i>Aylık Plan
+                            </a>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <small class="text-white-50">
+                                <i class="fas fa-shield-alt me-1"></i>
+                                7 gün ücretsiz deneme • İstediğiniz zaman iptal edebilirsiniz
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    <?php endif; ?>
+    
+    <?php include 'includes/footer.php'; ?>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Smooth scroll for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
         });
         
-        // Tıklanan FAQ'ı aç (eğer kapalıysa)
-        if (!isActive) {
-            faqItem.classList.add('active');
-        }
+        // Add animation on scroll
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
         
-        // Icon döndürme
-        const icon = question.querySelector('i');
-        if (faqItem.classList.contains('active')) {
-            icon.style.transform = 'rotate(180deg)';
-        } else {
-            icon.style.transform = 'rotate(0deg)';
-        }
-    });
-});
-
-console.log('Premium Avantajlar sayfası yüklendi - DOBİEN');
-</script>
-
-<?php include 'includes/footer.php'; ?>
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+        
+        // Observe feature cards
+        document.querySelectorAll('.feature-card').forEach(card => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(30px)';
+            card.style.transition = 'all 0.6s ease';
+            observer.observe(card);
+        });
+    </script>
+</body>
+</html>

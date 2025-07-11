@@ -157,31 +157,23 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 }
 
-// Admin tablosuna eksik alanları ekle (uyumluluk için)
+// Admin tablosunu tamamen güncel hale getir
 try {
-    // kullanici_adi alanını ekle
-    $pdo->exec("ALTER TABLE admin_kullanicilar ADD COLUMN kullanici_adi VARCHAR(100) UNIQUE AFTER email");
-} catch (PDOException $e) {
-    // Alan zaten varsa devam et
-}
-
-try {
-    // rol alanını ekle (yetki_seviyesi yerine)
-    $pdo->exec("ALTER TABLE admin_kullanicilar ADD COLUMN rol ENUM('admin','super_admin') DEFAULT 'admin' AFTER kullanici_adi");
-} catch (PDOException $e) {
-    // Alan zaten varsa devam et
-}
-
-// Eksik kullanici_adi alanlarını doldur
-try {
-    $pdo->exec("UPDATE admin_kullanicilar SET kullanici_adi = email WHERE kullanici_adi IS NULL OR kullanici_adi = ''");
-} catch (PDOException $e) {
-    // Hata varsa devam et
-}
-
-// yetki_seviyesi'ni rol'e kopyala
-try {
-    $pdo->exec("UPDATE admin_kullanicilar SET rol = yetki_seviyesi WHERE rol IS NULL OR rol = ''");
+    // Admin tablosunda eksik alanları kontrol et ve ekle
+    $columns = $pdo->query("SHOW COLUMNS FROM admin_kullanicilar")->fetchAll(PDO::FETCH_COLUMN);
+    
+    if (!in_array('kullanici_adi', $columns)) {
+        $pdo->exec("ALTER TABLE admin_kullanicilar ADD COLUMN kullanici_adi VARCHAR(100) AFTER email");
+    }
+    
+    if (!in_array('rol', $columns)) {
+        $pdo->exec("ALTER TABLE admin_kullanicilar ADD COLUMN rol ENUM('admin','super_admin') DEFAULT 'admin' AFTER kullanici_adi");
+    }
+    
+    // Eksik verileri doldur
+    $pdo->exec("UPDATE admin_kullanicilar SET kullanici_adi = COALESCE(kullanici_adi, email) WHERE kullanici_adi IS NULL OR kullanici_adi = ''");
+    $pdo->exec("UPDATE admin_kullanicilar SET rol = COALESCE(rol, yetki_seviyesi, 'admin') WHERE rol IS NULL OR rol = ''");
+    
 } catch (PDOException $e) {
     // Hata varsa devam et
 }

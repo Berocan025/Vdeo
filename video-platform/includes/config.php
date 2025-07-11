@@ -1,16 +1,16 @@
-THIS SHOULD BE A LINTER ERROR<?php
+<?php
 /**
  * DOBİEN Video Platform - Ana Config Dosyası
  * Geliştirici: DOBİEN
  * Modern Video Paylaşım Platformu
  */
 
-// Session ayarlarını önce yap, sonra başlat
+// Session ayarlarını sadece session başlamadan önce yap
 if (session_status() == PHP_SESSION_NONE) {
-    // Session ayarları - session başlamadan önce
-    ini_set('session.cookie_httponly', 1);
-    ini_set('session.cookie_secure', 0); // HTTPS için 1 yapın
-    ini_set('session.use_strict_mode', 1);
+    // Session ayarları
+    @ini_set('session.cookie_httponly', 1);
+    @ini_set('session.cookie_secure', 0); // HTTPS için 1 yapın
+    @ini_set('session.use_strict_mode', 1);
     
     session_start();
 }

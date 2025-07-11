@@ -2,21 +2,32 @@
 /**
  * DOBİEN Video Platform - Admin Çıkış
  * Geliştirici: DOBİEN
- * Admin Panel Çıkış İşlemi
- * Tüm Hakları Saklıdır © DOBİEN
+ * Modern Video Paylaşım Platformu
  */
 
-require_once '../includes/config.php';
+session_start();
 
-// Session'ı temizle
-session_destroy();
-
-// Cookie'leri temizle
-if (isset($_COOKIE['admin_remember'])) {
-    setcookie('admin_remember', '', time() - 3600, '/');
+// Admin oturumunu sonlandır
+if (isset($_SESSION['admin_id'])) {
+    // Güvenlik için tüm admin bilgilerini temizle
+    unset($_SESSION['admin_id']);
+    unset($_SESSION['admin_name']);
+    unset($_SESSION['admin_email']);
+    unset($_SESSION['admin_role']);
+    unset($_SESSION['admin_logged_in']);
+    
+    // Session'ı tamamen temizle
+    session_destroy();
+    
+    // Yeni session başlat
+    session_start();
+    
+    // Başarı mesajı
+    $_SESSION['message'] = 'Güvenli bir şekilde çıkış yaptınız.';
+    $_SESSION['message_type'] = 'success';
 }
 
-// Success message ile giriş sayfasına yönlendir
-header('Location: giris.php?message=Başarıyla çıkış yaptınız');
+// Admin giriş sayfasına yönlendir
+header('Location: admin-giris.php');
 exit;
 ?>

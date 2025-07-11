@@ -84,8 +84,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             `ad` varchar(50) NOT NULL,
             `soyad` varchar(50) NOT NULL,
             `email` varchar(100) NOT NULL,
+            `kullanici_adi` varchar(100) NOT NULL,
             `sifre` varchar(255) NOT NULL,
+            `rol` enum('admin','super_admin') NOT NULL DEFAULT 'admin',
             `yetki_seviyesi` enum('super_admin','admin','moderator') NOT NULL DEFAULT 'admin',
+            `avatar` varchar(255) DEFAULT NULL,
             `profil_resmi` varchar(255) DEFAULT NULL,
             `durum` enum('aktif','pasif') NOT NULL DEFAULT 'aktif',
             `son_giris_tarihi` timestamp NULL DEFAULT NULL,
@@ -93,7 +96,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             `olusturma_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
             `guncelleme_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY (`id`),
-            UNIQUE KEY `email` (`email`)
+            UNIQUE KEY `email` (`email`),
+            UNIQUE KEY `kullanici_adi` (`kullanici_adi`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
         CREATE TABLE IF NOT EXISTS `site_ayarlari` (
@@ -173,6 +177,28 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             KEY `kategori_id` (`kategori_id`),
             FOREIGN KEY (`kategori_id`) REFERENCES `kategoriler` (`id`) ON DELETE SET NULL
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        
+        CREATE TABLE IF NOT EXISTS `slider` (
+            `id` int(11) NOT NULL AUTO_INCREMENT,
+            `baslik` varchar(255) NOT NULL,
+            `aciklama` text,
+            `resim` varchar(255) NOT NULL,
+            `mobil_resim` varchar(255) DEFAULT NULL,
+            `link` varchar(255) DEFAULT NULL,
+            `buton_metni` varchar(100) DEFAULT 'İzle',
+            `video_id` int(11) DEFAULT NULL,
+            `siralama` int(11) DEFAULT '0',
+            `durum` enum('aktif','pasif') DEFAULT 'aktif',
+            `baslangic_tarihi` timestamp NULL DEFAULT NULL,
+            `bitis_tarihi` timestamp NULL DEFAULT NULL,
+            `click_sayisi` int(11) DEFAULT '0',
+            `olusturma_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            `guncelleme_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (`id`),
+            KEY `video_id` (`video_id`),
+            KEY `durum` (`durum`),
+            KEY `siralama` (`siralama`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         ";
         
         // Temel tabloları oluştur
@@ -195,8 +221,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         
         // Önce yeni tablo yapısını dene (admin_kullanicilar)
         try {
-            $stmt = $pdo->prepare("INSERT INTO admin_kullanicilar (ad, soyad, email, sifre, yetki_seviyesi) VALUES (?, ?, ?, ?, 'super_admin')");
-            $stmt->execute(['DOBİEN', 'Admin', $admin_email, $admin_sifre_hash]);
+            $stmt = $pdo->prepare("INSERT INTO admin_kullanicilar (ad, soyad, email, kullanici_adi, sifre, rol, yetki_seviyesi) VALUES (?, ?, ?, ?, ?, 'super_admin', 'super_admin')");
+            $stmt->execute(['DOBİEN', 'Admin', $admin_email, $admin_kullanici, $admin_sifre_hash]);
             $admin_inserted = true;
         } catch (PDOException $e) {
             // Yeni tablo yoksa eski tabloyu dene (adminler)
