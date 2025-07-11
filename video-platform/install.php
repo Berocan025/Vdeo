@@ -335,9 +335,7 @@ define('CACHE_TIME', 3600);
 // Zaman Dilimi
 date_default_timezone_set('Europe/Istanbul');
 
-// Session ayarları
-ini_set('session.cookie_httponly', 1);
-ini_set('session.use_strict_mode', 1);
+// Session ayarları PHP.ini'de yapılmalı (ini_set session aktifken çalışmaz)
 
 // Bellek ve upload limitleri
 ini_set('memory_limit', '256M');
