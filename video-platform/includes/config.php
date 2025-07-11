@@ -1,4 +1,4 @@
-<?php
+THIS SHOULD BE A LINTER ERROR<?php
 /**
  * DOBİEN Video Platform - Ana Config Dosyası
  * Geliştirici: DOBİEN

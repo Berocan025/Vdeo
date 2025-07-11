@@ -157,6 +157,35 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 }
 
+// Admin tablosuna eksik alanları ekle (uyumluluk için)
+try {
+    // kullanici_adi alanını ekle
+    $pdo->exec("ALTER TABLE admin_kullanicilar ADD COLUMN kullanici_adi VARCHAR(100) UNIQUE AFTER email");
+} catch (PDOException $e) {
+    // Alan zaten varsa devam et
+}
+
+try {
+    // rol alanını ekle (yetki_seviyesi yerine)
+    $pdo->exec("ALTER TABLE admin_kullanicilar ADD COLUMN rol ENUM('admin','super_admin') DEFAULT 'admin' AFTER kullanici_adi");
+} catch (PDOException $e) {
+    // Alan zaten varsa devam et
+}
+
+// Eksik kullanici_adi alanlarını doldur
+try {
+    $pdo->exec("UPDATE admin_kullanicilar SET kullanici_adi = email WHERE kullanici_adi IS NULL OR kullanici_adi = ''");
+} catch (PDOException $e) {
+    // Hata varsa devam et
+}
+
+// yetki_seviyesi'ni rol'e kopyala
+try {
+    $pdo->exec("UPDATE admin_kullanicilar SET rol = yetki_seviyesi WHERE rol IS NULL OR rol = ''");
+} catch (PDOException $e) {
+    // Hata varsa devam et
+}
+
 // Admin listesini çek
 try {
     $admins = $pdo->query("SELECT * FROM admin_kullanicilar ORDER BY olusturma_tarihi DESC")->fetchAll();
@@ -238,10 +267,10 @@ $page_title = "Admin Yönetimi";
                                         </div>
                                     </td>
                                     <td><?php echo htmlspecialchars($admin['email']); ?></td>
-                                    <td><?php echo htmlspecialchars($admin['kullanici_adi']); ?></td>
+                                    <td><?php echo htmlspecialchars($admin['kullanici_adi'] ?? $admin['email'] ?? 'Bilinmiyor'); ?></td>
                                     <td>
-                                        <span class="badge badge-<?php echo $admin['rol'] == 'super_admin' ? 'danger' : 'primary'; ?>">
-                                            <?php echo $admin['rol'] == 'super_admin' ? 'Süper Admin' : 'Admin'; ?>
+                                        <span class="badge badge-<?php echo ($admin['rol'] ?? 'admin') == 'super_admin' ? 'danger' : 'primary'; ?>">
+                                            <?php echo ($admin['rol'] ?? 'admin') == 'super_admin' ? 'Süper Admin' : 'Admin'; ?>
                                         </span>
                                     </td>
                                     <td>
@@ -257,8 +286,8 @@ $page_title = "Admin Yönetimi";
                                                     data-ad="<?php echo htmlspecialchars($admin['ad']); ?>"
                                                     data-soyad="<?php echo htmlspecialchars($admin['soyad']); ?>"
                                                     data-email="<?php echo htmlspecialchars($admin['email']); ?>"
-                                                    data-kullanici-adi="<?php echo htmlspecialchars($admin['kullanici_adi']); ?>"
-                                                    data-rol="<?php echo $admin['rol']; ?>"
+                                                    data-kullanici-adi="<?php echo htmlspecialchars($admin['kullanici_adi'] ?? $admin['email'] ?? ''); ?>"
+                                                    data-rol="<?php echo $admin['rol'] ?? 'admin'; ?>"
                                                     data-durum="<?php echo $admin['durum']; ?>">
                                                 <i class="fas fa-edit"></i>
                                             </button>
