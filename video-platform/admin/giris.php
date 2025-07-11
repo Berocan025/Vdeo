@@ -27,46 +27,58 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $error_message = 'Kullanıcı adı ve şifre gereklidir.';
     } else {
         try {
-            // Admin kullanıcısını kontrol et
-            $stmt = $pdo->prepare("SELECT * FROM adminler WHERE (kullanici_adi = ? OR email = ?) AND durum = 'aktif'");
-            $stmt->execute([$kullanici_adi, $kullanici_adi]);
-            $admin = $stmt->fetch();
+            // Admin kullanıcısını kontrol et - database.sql'deki tablo yapısı
+            try {
+                $stmt = $pdo->prepare("SELECT * FROM admin_kullanicilar WHERE email = ? AND durum = 'aktif'");
+                $stmt->execute([$kullanici_adi]);
+                $admin = $stmt->fetch();
+            } catch (PDOException $e) {
+                // Eski tablo adını dene
+                $stmt = $pdo->prepare("SELECT * FROM adminler WHERE (kullanici_adi = ? OR email = ?) AND durum = 'aktif'");
+                $stmt->execute([$kullanici_adi, $kullanici_adi]);
+                $admin = $stmt->fetch();
+            }
             
             if ($admin && password_verify($sifre, $admin['sifre'])) {
                 // Giriş başarılı
                 $_SESSION['admin_id'] = $admin['id'];
                 $_SESSION['admin_logged_in'] = true;
-                $_SESSION['admin_kullanici_adi'] = $admin['kullanici_adi'];
-                $_SESSION['admin_rol'] = $admin['rol'];
+                $_SESSION['admin_email'] = $admin['email'];
+                $_SESSION['admin_ad_soyad'] = $admin['ad'] . ' ' . $admin['soyad'];
+                $_SESSION['admin_yetki'] = $admin['yetki_seviyesi'];
                 
                 // Son giriş tarihini güncelle
-                $update_stmt = $pdo->prepare("UPDATE adminler SET son_giris = NOW(), son_ip = ? WHERE id = ?");
-                $update_stmt->execute([$_SERVER['REMOTE_ADDR'], $admin['id']]);
-                
-                // Beni hatırla seçeneği
-                if ($beni_hatirla) {
-                    $token = bin2hex(random_bytes(32));
-                    setcookie('admin_remember_token', $token, time() + (30 * 24 * 60 * 60), '/', '', true, true); // 30 gün
-                    
-                    // Token'ı veritabanına kaydet
-                    $token_stmt = $pdo->prepare("UPDATE adminler SET remember_token = ? WHERE id = ?");
-                    $token_stmt->execute([$token, $admin['id']]);
+                try {
+                    $update_stmt = $pdo->prepare("UPDATE admin_kullanicilar SET son_giris_tarihi = NOW(), son_giris_ip = ? WHERE id = ?");
+                    $update_stmt->execute([$_SERVER['REMOTE_ADDR'], $admin['id']]);
+                } catch (PDOException $e) {
+                    // Eski tablo için
+                    $update_stmt = $pdo->prepare("UPDATE adminler SET son_giris = NOW(), son_ip = ? WHERE id = ?");
+                    $update_stmt->execute([$_SERVER['REMOTE_ADDR'], $admin['id']]);
                 }
                 
-                // Giriş logunu kaydet
-                $log_stmt = $pdo->prepare("INSERT INTO admin_loglar (admin_id, islem, aciklama, ip_adresi) VALUES (?, 'giris', 'Admin paneline giriş yapıldı', ?)");
-                $log_stmt->execute([$admin['id'], $_SERVER['REMOTE_ADDR']]);
+                // Sistem logunu kaydet
+                try {
+                    $log_stmt = $pdo->prepare("INSERT INTO sistem_loglari (kullanici_id, kullanici_tipi, islem, detaylar, ip_adresi) VALUES (?, 'admin', 'giris', 'Admin paneline giriş yapıldı', ?)");
+                    $log_stmt->execute([$admin['id'], $_SERVER['REMOTE_ADDR']]);
+                } catch (PDOException $e) {
+                    // Log tablosu yoksa görmezden gel
+                }
                 
                 $success_message = 'Giriş başarılı! Yönlendiriliyorsunuz...';
                 
                 // 2 saniye sonra yönlendir
                 header("refresh:2;url=index.php");
             } else {
-                $error_message = 'Kullanıcı adı veya şifre hatalı.';
+                $error_message = 'E-posta veya şifre hatalı.';
                 
                 // Başarısız giriş denemesini logla
-                $log_stmt = $pdo->prepare("INSERT INTO admin_loglar (admin_id, islem, aciklama, ip_adresi) VALUES (0, 'giris_hatasi', 'Başarısız giriş denemesi: ' . ?, ?)");
-                $log_stmt->execute([$kullanici_adi, $_SERVER['REMOTE_ADDR']]);
+                try {
+                    $log_stmt = $pdo->prepare("INSERT INTO sistem_loglari (kullanici_id, kullanici_tipi, islem, detaylar, ip_adresi) VALUES (0, 'admin', 'giris_hatasi', 'Başarısız giriş denemesi: ' . ?, ?)");
+                    $log_stmt->execute([$kullanici_adi, $_SERVER['REMOTE_ADDR']]);
+                } catch (PDOException $e) {
+                    // Log tablosu yoksa görmezden gel
+                }
             }
         } catch (Exception $e) {
             $error_message = 'Bir hata oluştu. Lütfen tekrar deneyin.';

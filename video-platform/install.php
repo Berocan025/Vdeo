@@ -28,204 +28,83 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $pdo->exec("CREATE DATABASE IF NOT EXISTS `$veritabani_adi` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
         $pdo->exec("USE `$veritabani_adi`");
 
-        // Tabloları oluştur
-        $tablolar = "
-        CREATE TABLE IF NOT EXISTS `ayarlar` (
-            `id` int(11) NOT NULL AUTO_INCREMENT,
-            `site_adi` varchar(255) NOT NULL,
-            `site_url` varchar(255) NOT NULL,
-            `site_aciklama` text,
-            `meta_anahtar` text,
-            `logo` varchar(255),
-            `favicon` varchar(255),
-            `email` varchar(255),
-            `telefon` varchar(20),
-            `adres` text,
-            `footer_metin` text,
-            `sosyal_facebook` varchar(255),
-            `sosyal_twitter` varchar(255),
-            `sosyal_instagram` varchar(255),
-            `sosyal_youtube` varchar(255),
-            `analytics_kod` text,
-            `kayit_durumu` tinyint(1) DEFAULT 1,
-            `email_dogrulama` tinyint(1) DEFAULT 0,
-            PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-        CREATE TABLE IF NOT EXISTS `kullanicilar` (
-            `id` int(11) NOT NULL AUTO_INCREMENT,
-            `kullanici_adi` varchar(50) NOT NULL UNIQUE,
-            `email` varchar(100) NOT NULL UNIQUE,
-            `sifre` varchar(255) NOT NULL,
-            `ad_soyad` varchar(100),
-            `telefon` varchar(20),
-            `avatar` varchar(255),
-            `uyelik_tipi` enum('kullanici','vip','premium') DEFAULT 'kullanici',
-            `durum` enum('aktif','pasif','yasakli') DEFAULT 'aktif',
-            `email_dogrulandi` tinyint(1) DEFAULT 0,
-            `kayit_tarihi` datetime DEFAULT CURRENT_TIMESTAMP,
-            `son_giris` datetime,
-            `premium_bitis` datetime NULL,
-            `vip_bitis` datetime NULL,
-            PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-        CREATE TABLE IF NOT EXISTS `adminler` (
-            `id` int(11) NOT NULL AUTO_INCREMENT,
-            `kullanici_adi` varchar(50) NOT NULL UNIQUE,
-            `email` varchar(100) NOT NULL UNIQUE,
-            `sifre` varchar(255) NOT NULL,
-            `ad_soyad` varchar(100),
-            `yetki_seviyesi` enum('super_admin','admin','moderator') DEFAULT 'admin',
-            `durum` enum('aktif','pasif') DEFAULT 'aktif',
-            `kayit_tarihi` datetime DEFAULT CURRENT_TIMESTAMP,
-            `son_giris` datetime,
-            PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-        CREATE TABLE IF NOT EXISTS `kategoriler` (
-            `id` int(11) NOT NULL AUTO_INCREMENT,
-            `kategori_adi` varchar(100) NOT NULL,
-            `slug` varchar(100) NOT NULL UNIQUE,
-            `aciklama` text,
-            `resim` varchar(255),
-            `siralama` int(11) DEFAULT 0,
-            `durum` enum('aktif','pasif') DEFAULT 'aktif',
-            `olusturma_tarihi` datetime DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-        CREATE TABLE IF NOT EXISTS `videolar` (
-            `id` int(11) NOT NULL AUTO_INCREMENT,
-            `baslik` varchar(255) NOT NULL,
-            `slug` varchar(255) NOT NULL UNIQUE,
-            `aciklama` text,
-            `video_dosya` varchar(255) NOT NULL,
-            `kapak_resmi` varchar(255),
-            `kategori_id` int(11),
-            `etiketler` text,
-            `sure` varchar(10),
-            `boyut` bigint(20),
-            `izlenme_sayisi` int(11) DEFAULT 0,
-            `begeni_sayisi` int(11) DEFAULT 0,
-            `begenmeme_sayisi` int(11) DEFAULT 0,
-            `goruntulenme_yetkisi` enum('herkes','vip','premium') DEFAULT 'herkes',
-            `fiyat` decimal(10,2) DEFAULT 0.00,
-            `ucretsiz` tinyint(1) DEFAULT 1,
-            `ozellik` enum('normal','ozel','populer','yeni') DEFAULT 'normal',
-            `durum` enum('aktif','pasif','beklemede') DEFAULT 'aktif',
-            `ekleyen_admin` int(11),
-            `ekleme_tarihi` datetime DEFAULT CURRENT_TIMESTAMP,
-            `guncelleme_tarihi` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            PRIMARY KEY (`id`),
-            KEY `kategori_id` (`kategori_id`),
-            KEY `ekleyen_admin` (`ekleyen_admin`),
-            FOREIGN KEY (`kategori_id`) REFERENCES `kategoriler` (`id`) ON DELETE SET NULL,
-            FOREIGN KEY (`ekleyen_admin`) REFERENCES `adminler` (`id`) ON DELETE SET NULL
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-        CREATE TABLE IF NOT EXISTS `slider` (
-            `id` int(11) NOT NULL AUTO_INCREMENT,
-            `baslik` varchar(255) NOT NULL,
-            `aciklama` text,
-            `resim` varchar(255) NOT NULL,
-            `link` varchar(255),
-            `buton_metni` varchar(50),
-            `siralama` int(11) DEFAULT 0,
-            `durum` enum('aktif','pasif') DEFAULT 'aktif',
-            `olusturma_tarihi` datetime DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-        CREATE TABLE IF NOT EXISTS `satin_almalar` (
-            `id` int(11) NOT NULL AUTO_INCREMENT,
-            `kullanici_id` int(11) NOT NULL,
-            `urun_tipi` enum('video','vip','premium') NOT NULL,
-            `urun_id` int(11),
-            `tutar` decimal(10,2) NOT NULL,
-            `odeme_yontemi` varchar(50),
-            `islem_id` varchar(100),
-            `durum` enum('beklemede','onaylandi','iptal') DEFAULT 'beklemede',
-            `satin_alma_tarihi` datetime DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (`id`),
-            KEY `kullanici_id` (`kullanici_id`),
-            FOREIGN KEY (`kullanici_id`) REFERENCES `kullanicilar` (`id`) ON DELETE CASCADE
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-        CREATE TABLE IF NOT EXISTS `yorumlar` (
-            `id` int(11) NOT NULL AUTO_INCREMENT,
-            `video_id` int(11) NOT NULL,
-            `kullanici_id` int(11) NOT NULL,
-            `yorum` text NOT NULL,
-            `durum` enum('aktif','pasif','beklemede') DEFAULT 'beklemede',
-            `yorum_tarihi` datetime DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (`id`),
-            KEY `video_id` (`video_id`),
-            KEY `kullanici_id` (`kullanici_id`),
-            FOREIGN KEY (`video_id`) REFERENCES `videolar` (`id`) ON DELETE CASCADE,
-            FOREIGN KEY (`kullanici_id`) REFERENCES `kullanicilar` (`id`) ON DELETE CASCADE
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-        CREATE TABLE IF NOT EXISTS `favoriler` (
-            `id` int(11) NOT NULL AUTO_INCREMENT,
-            `kullanici_id` int(11) NOT NULL,
-            `video_id` int(11) NOT NULL,
-            `ekleme_tarihi` datetime DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (`id`),
-            UNIQUE KEY `kullanici_video` (`kullanici_id`,`video_id`),
-            FOREIGN KEY (`kullanici_id`) REFERENCES `kullanicilar` (`id`) ON DELETE CASCADE,
-            FOREIGN KEY (`video_id`) REFERENCES `videolar` (`id`) ON DELETE CASCADE
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-        CREATE TABLE IF NOT EXISTS `izleme_gecmisi` (
-            `id` int(11) NOT NULL AUTO_INCREMENT,
-            `kullanici_id` int(11) NOT NULL,
-            `video_id` int(11) NOT NULL,
-            `izleme_suresi` int(11) DEFAULT 0,
-            `son_izleme` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            PRIMARY KEY (`id`),
-            UNIQUE KEY `kullanici_video` (`kullanici_id`,`video_id`),
-            FOREIGN KEY (`kullanici_id`) REFERENCES `kullanicilar` (`id`) ON DELETE CASCADE,
-            FOREIGN KEY (`video_id`) REFERENCES `videolar` (`id`) ON DELETE CASCADE
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-        CREATE TABLE IF NOT EXISTS `begeniler` (
-            `id` int(11) NOT NULL AUTO_INCREMENT,
-            `kullanici_id` int(11) NOT NULL,
-            `video_id` int(11) NOT NULL,
-            `tur` enum('begendi','begenmedi') NOT NULL,
-            `tarih` datetime DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (`id`),
-            UNIQUE KEY `kullanici_video` (`kullanici_id`,`video_id`),
-            FOREIGN KEY (`kullanici_id`) REFERENCES `kullanicilar` (`id`) ON DELETE CASCADE,
-            FOREIGN KEY (`video_id`) REFERENCES `videolar` (`id`) ON DELETE CASCADE
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-        ";
-
-        // Tabloları çalıştır
-        $pdo->exec($tablolar);
+        // Database.sql dosyasını çalıştır
+        $sql_content = file_get_contents('database.sql');
+        
+        // SQL'i ';' karakterine göre böl ve çalıştır
+        $statements = array_filter(explode(';', $sql_content));
+        
+        foreach ($statements as $statement) {
+            $statement = trim($statement);
+            if (!empty($statement) && !preg_match('/^(--|\#|\/\*)/', $statement)) {
+                try {
+                    $pdo->exec($statement);
+                } catch (PDOException $e) {
+                    // Hata olsa bile devam et
+                    continue;
+                }
+            }
+        }
 
         // Admin kullanıcı ekle
         $admin_sifre_hash = password_hash($admin_sifre, PASSWORD_DEFAULT);
-        $stmt = $pdo->prepare("INSERT INTO adminler (kullanici_adi, email, sifre, ad_soyad, yetki_seviyesi) VALUES (?, ?, ?, 'DOBİEN Admin', 'super_admin')");
-        $stmt->execute([$admin_kullanici, $admin_email, $admin_sifre_hash]);
+        
+        // Admin tablosuna veri eklerken database.sql'deki tablo isimlerini kullan
+        try {
+            $stmt = $pdo->prepare("INSERT INTO admin_kullanicilar (ad, soyad, email, sifre, yetki_seviyesi) VALUES (?, ?, ?, ?, 'super_admin')");
+            $stmt->execute(['DOBİEN', 'Admin', $admin_email, $admin_sifre_hash]);
+        } catch (PDOException $e) {
+            // Eski tablo adını dene
+            $stmt = $pdo->prepare("INSERT INTO adminler (kullanici_adi, email, sifre, ad_soyad, yetki_seviyesi) VALUES (?, ?, ?, 'DOBİEN Admin', 'super_admin')");
+            $stmt->execute([$admin_kullanici, $admin_email, $admin_sifre_hash]);
+        }
 
-        // Site ayarları ekle
-        $stmt = $pdo->prepare("INSERT INTO ayarlar (site_adi, site_url, site_aciklama, footer_metin) VALUES (?, ?, 'DOBİEN Video Platform - Modern Video Paylaşım Sitesi', 'DOBİEN tarafından geliştirildi. Tüm hakları saklıdır.')");
-        $stmt->execute([$site_adi, $site_url]);
+        // Site ayarları ekle 
+        try {
+            // Önce site_ayarlari tablosuna ekle (database.sql'deki format)
+            $site_ayarlari = [
+                ['site_baslik', $site_adi, 'Site başlığı'],
+                ['site_aciklama', 'DOBİEN Video Platform - Modern Video Paylaşım Sitesi', 'Site açıklaması'],
+                ['site_anahtar_kelimeler', 'video platform, premium videolar, 4k video, vip üyelik, DOBİEN', 'SEO anahtar kelimeleri'],
+                ['footer_metin', 'DOBİEN tarafından geliştirildi. Tüm hakları saklıdır.', 'Footer metni'],
+                ['yas_dogrulama_aktif', '1', 'Yaş doğrulama popup aktif/pasif'],
+                ['yas_dogrulama_baslik', 'Yaş Doğrulama Gerekli', 'Yaş doğrulama popup başlığı'],
+                ['yas_dogrulama_mesaj', 'Bu siteye erişebilmeniz için 18 yaşından büyük olmanız gerekmektedir.', 'Yaş doğrulama mesajı'],
+                ['sistem_email', $admin_email, 'Sistem e-posta adresi'],
+                ['max_video_boyut', '500', 'Maksimum video boyutu (MB)'],
+                ['izin_verilen_formatlar', 'mp4,avi,mov,wmv', 'İzin verilen video formatları'],
+                ['varsayilan_video_kalite', '720p', 'Varsayılan video kalitesi']
+            ];
+            
+            foreach ($site_ayarlari as $ayar) {
+                $stmt = $pdo->prepare("INSERT INTO site_ayarlari (anahtar, deger, aciklama) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE deger = VALUES(deger)");
+                $stmt->execute($ayar);
+            }
+        } catch (PDOException $e) {
+            // Eski tablo adını dene
+            $stmt = $pdo->prepare("INSERT INTO ayarlar (site_adi, site_url, site_aciklama, footer_metin) VALUES (?, ?, 'DOBİEN Video Platform - Modern Video Paylaşım Sitesi', 'DOBİEN tarafından geliştirildi. Tüm hakları saklıdır.')");
+            $stmt->execute([$site_adi, $site_url]);
+        }
 
-        // Örnek kategoriler ekle
-        $kategoriler = [
-            ['Film', 'film', 'Film kategorisi'],
-            ['Dizi', 'dizi', 'Dizi kategorisi'],
-            ['Anime', 'anime', 'Anime kategorisi'],
-            ['Belgesel', 'belgesel', 'Belgesel kategorisi'],
-            ['Müzik', 'muzik', 'Müzik kategorisi']
+        // Config klasörünü oluştur
+        if (!is_dir('config')) {
+            mkdir('config', 0755, true);
+        }
+
+        // Uploads klasörlerini oluştur
+        $upload_dirs = [
+            'uploads',
+            'uploads/videos',
+            'uploads/thumbnails', 
+            'uploads/categories',
+            'uploads/sliders',
+            'uploads/avatars'
         ];
-
-        foreach ($kategoriler as $kategori) {
-            $stmt = $pdo->prepare("INSERT INTO kategoriler (kategori_adi, slug, aciklama) VALUES (?, ?, ?)");
-            $stmt->execute($kategori);
+        
+        foreach ($upload_dirs as $dir) {
+            if (!is_dir($dir)) {
+                mkdir($dir, 0755, true);
+            }
         }
 
         // Config dosyası oluştur

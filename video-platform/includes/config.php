@@ -40,8 +40,47 @@ try {
 // Site ayarlarını çek
 function getSiteSettings() {
     global $pdo;
-    $stmt = $pdo->query("SELECT * FROM ayarlar LIMIT 1");
-    return $stmt->fetch();
+    try {
+        // Önce yeni tablo formatını dene (site_ayarlari)
+        $stmt = $pdo->query("SELECT anahtar, deger FROM site_ayarlari");
+        $rows = $stmt->fetchAll();
+        
+        $settings = [];
+        foreach ($rows as $row) {
+            $settings[$row['anahtar']] = $row['deger'];
+        }
+        
+        // Eski format için uyumluluk
+        if (!empty($settings)) {
+            return [
+                'site_adi' => $settings['site_baslik'] ?? 'DOBİEN Video Platform',
+                'site_url' => SITE_URL ?? 'http://localhost',
+                'site_aciklama' => $settings['site_aciklama'] ?? 'Modern Video Paylaşım Platformu',
+                'footer_metin' => $settings['footer_metin'] ?? 'DOBİEN tarafından geliştirildi.',
+                'logo' => $settings['site_logo'] ?? '',
+                'favicon' => $settings['site_favicon'] ?? '',
+                'google_analytics' => $settings['google_analytics'] ?? '',
+                'yas_dogrulama_aktif' => $settings['yas_dogrulama_aktif'] ?? '1',
+                'yas_dogrulama_baslik' => $settings['yas_dogrulama_baslik'] ?? 'Yaş Doğrulama',
+                'yas_dogrulama_mesaj' => $settings['yas_dogrulama_mesaj'] ?? '18 yaşından büyük olmalısınız.'
+            ];
+        }
+    } catch (PDOException $e) {
+        // Eski tablo formatını dene (ayarlar)
+        try {
+            $stmt = $pdo->query("SELECT * FROM ayarlar LIMIT 1");
+            return $stmt->fetch();
+        } catch (PDOException $e2) {
+            // Varsayılan değerler döndür
+            return [
+                'site_adi' => 'DOBİEN Video Platform',
+                'site_url' => SITE_URL ?? 'http://localhost',
+                'site_aciklama' => 'Modern Video Paylaşım Platformu',
+                'footer_metin' => 'DOBİEN tarafından geliştirildi.',
+                'yas_dogrulama_aktif' => '1'
+            ];
+        }
+    }
 }
 
 // Güvenli URL fonksiyonu
@@ -112,6 +151,35 @@ function checkMembership($required_level = 'kullanici') {
 // Admin kontrolü
 function isAdmin() {
     return isset($_SESSION['admin_id']) && $_SESSION['admin_logged_in'] === true;
+}
+
+// Admin oturum kontrolü
+function checkAdminSession() {
+    if (isset($_SESSION['admin_id'])) {
+        global $pdo;
+        try {
+            $stmt = $pdo->prepare("SELECT * FROM admin_kullanicilar WHERE id = ? AND durum = 'aktif'");
+            $stmt->execute([$_SESSION['admin_id']]);
+            $admin = $stmt->fetch();
+            
+            if (!$admin) {
+                session_destroy();
+                return false;
+            }
+            
+            return $admin;
+        } catch (PDOException $e) {
+            // Eski tablo adını dene
+            try {
+                $stmt = $pdo->prepare("SELECT * FROM adminler WHERE id = ? AND durum = 'aktif'");
+                $stmt->execute([$_SESSION['admin_id']]);
+                return $stmt->fetch();
+            } catch (PDOException $e2) {
+                return false;
+            }
+        }
+    }
+    return false;
 }
 
 // CSRF token oluştur
