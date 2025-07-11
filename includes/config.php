@@ -245,13 +245,19 @@ function checkUserSession() {
             return false;
         }
         
-        // Premium ve VIP sürelerini kontrol et
+        // Premium ve VIP sürelerini kontrol et (güvenli erişim)
         $now = date('Y-m-d H:i:s');
-        if ($user['premium_bitis'] && $user['premium_bitis'] < $now) {
+        
+        // Premium süre kontrolü
+        $premium_bitis = $user['premium_bitis'] ?? null;
+        if ($premium_bitis && $premium_bitis < $now) {
             $pdo->prepare("UPDATE kullanicilar SET uyelik_tipi = 'kullanici', premium_bitis = NULL WHERE id = ?")->execute([$user['id']]);
             $_SESSION['user_membership'] = 'kullanici';
         }
-        if ($user['vip_bitis'] && $user['vip_bitis'] < $now) {
+        
+        // VIP süre kontrolü  
+        $vip_bitis = $user['vip_bitis'] ?? null;
+        if ($vip_bitis && $vip_bitis < $now) {
             $pdo->prepare("UPDATE kullanicilar SET uyelik_tipi = 'kullanici', vip_bitis = NULL WHERE id = ?")->execute([$user['id']]);
             $_SESSION['user_membership'] = 'kullanici';
         }

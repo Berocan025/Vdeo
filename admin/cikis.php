@@ -21,6 +21,6 @@ if (isset($_SESSION['admin_id'])) {
 }
 
 // Admin giriş sayfasına yönlendir
-header('Location: admin-giris.php');
+header('Location: giris.php');
 exit;
 ?>

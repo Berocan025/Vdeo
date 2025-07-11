@@ -9,7 +9,7 @@ require_once '../includes/config.php';
 
 // Admin kontrolü
 if (!isAdmin()) {
-    header('Location: admin-giris.php');
+    header('Location: giris.php');
     exit;
 }
 

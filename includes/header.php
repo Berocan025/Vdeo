@@ -56,7 +56,7 @@ if (!defined('DB_HOST')) {
                     <div class="user-dropdown">
                         <button class="user-toggle">
                             <img src="<?php echo $current_user['avatar'] ? siteUrl('uploads/avatars/' . $current_user['avatar']) : siteUrl('assets/images/default-avatar.png'); ?>" alt="Avatar" class="user-avatar">
-                            <span class="username"><?php echo safeOutput($current_user['kullanici_adi']); ?></span>
+                            <span class="username"><?php echo safeOutput($current_user['ad'] . ' ' . $current_user['soyad']); ?></span>
                             <span class="membership-badge <?php echo $current_user['uyelik_tipi']; ?>">
                                 <?php 
                                 switch($current_user['uyelik_tipi']) {

@@ -2,635 +2,399 @@
 /**
  * DOBİEN Video Platform - Admin Video Yönetimi
  * Geliştirici: DOBİEN
- * Tüm Hakları Saklıdır © DOBİEN
+ * Modern Video Paylaşım Platformu
  */
 
 require_once '../includes/config.php';
 
-// Admin kontrolü
-if (!isset($_SESSION['admin']) || $_SESSION['admin'] !== true) {
+// Admin giriş kontrolü
+if (!isset($_SESSION['admin_id']) || $_SESSION['admin_logged_in'] !== true) {
+    header('Location: giris.php');
+    exit;
+}
+
+$admin_user = checkAdminSession();
+if (!$admin_user) {
     header('Location: giris.php');
     exit;
 }
 
 $page_title = "Video Yönetimi";
-$success_message = '';
-$error_message = '';
 
 // Video işlemleri
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (isset($_POST['add_video'])) {
-        // Video ekleme
-        $baslik = trim($_POST['baslik']);
-        $aciklama = trim($_POST['aciklama']);
-        $kategori_id = $_POST['kategori_id'];
-        $video_url = trim($_POST['video_url']);
-        $goruntulenme_yetkisi = $_POST['goruntulenme_yetkisi'];
-        $ozellik = $_POST['ozellik'];
-        $etiketler = trim($_POST['etiketler']);
-        $sure = $_POST['sure'] ?? null;
-        
-        if (empty($baslik) || empty($video_url)) {
-            $error_message = 'Başlık ve video URL\'si zorunludur.';
-        } else {
-            // Kapak resmi upload
-            $kapak_resmi = null;
-            if (isset($_FILES['kapak_resmi']) && $_FILES['kapak_resmi']['error'] === 0) {
-                $upload_dir = '../uploads/thumbnails/';
-                if (!is_dir($upload_dir)) {
-                    mkdir($upload_dir, 0755, true);
-                }
-                
-                $file_extension = strtolower(pathinfo($_FILES['kapak_resmi']['name'], PATHINFO_EXTENSION));
-                $allowed_extensions = ['jpg', 'jpeg', 'png', 'webp'];
-                
-                if (in_array($file_extension, $allowed_extensions)) {
-                    $kapak_resmi = uniqid() . '.' . $file_extension;
-                    $upload_path = $upload_dir . $kapak_resmi;
-                    
-                    if (!move_uploaded_file($_FILES['kapak_resmi']['tmp_name'], $upload_path)) {
-                        $kapak_resmi = null;
-                    }
-                }
-            }
-            
-            try {
-                $stmt = $pdo->prepare("
-                    INSERT INTO videolar (baslik, aciklama, kategori_id, video_url, kapak_resmi, 
-                                        goruntulenme_yetkisi, ozellik, etiketler, sure, ekleme_tarihi, durum) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), 'aktif')
-                ");
-                $stmt->execute([$baslik, $aciklama, $kategori_id, $video_url, $kapak_resmi, 
-                               $goruntulenme_yetkisi, $ozellik, $etiketler, $sure]);
-                
-                $success_message = 'Video başarıyla eklendi.';
-            } catch (PDOException $e) {
-                $error_message = 'Video eklenirken hata oluştu: ' . $e->getMessage();
-            }
-        }
-    }
+    $action = $_POST['action'] ?? '';
     
-    if (isset($_POST['update_video'])) {
-        // Video güncelleme
-        $video_id = $_POST['video_id'];
-        $baslik = trim($_POST['baslik']);
-        $aciklama = trim($_POST['aciklama']);
-        $kategori_id = $_POST['kategori_id'];
-        $video_url = trim($_POST['video_url']);
-        $goruntulenme_yetkisi = $_POST['goruntulenme_yetkisi'];
-        $ozellik = $_POST['ozellik'];
-        $etiketler = trim($_POST['etiketler']);
-        $sure = $_POST['sure'] ?? null;
-        $durum = $_POST['durum'];
-        
-        if (empty($baslik) || empty($video_url)) {
-            $error_message = 'Başlık ve video URL\'si zorunludur.';
-        } else {
-            try {
-                $stmt = $pdo->prepare("
-                    UPDATE videolar SET baslik = ?, aciklama = ?, kategori_id = ?, video_url = ?, 
-                                      goruntulenme_yetkisi = ?, ozellik = ?, etiketler = ?, sure = ?, durum = ?
-                    WHERE id = ?
-                ");
-                $stmt->execute([$baslik, $aciklama, $kategori_id, $video_url, 
-                               $goruntulenme_yetkisi, $ozellik, $etiketler, $sure, $durum, $video_id]);
-                
-                $success_message = 'Video başarıyla güncellendi.';
-            } catch (PDOException $e) {
-                $error_message = 'Video güncellenirken hata oluştu: ' . $e->getMessage();
-            }
-        }
-    }
-    
-    if (isset($_POST['delete_video'])) {
-        // Video silme
-        $video_id = $_POST['video_id'];
-        
-        try {
-            // Önce kapak resmini sil
-            $stmt = $pdo->prepare("SELECT kapak_resmi FROM videolar WHERE id = ?");
-            $stmt->execute([$video_id]);
-            $video = $stmt->fetch();
+    try {
+        if ($action === 'add_video') {
+            $baslik = trim($_POST['baslik'] ?? '');
+            $aciklama = trim($_POST['aciklama'] ?? '');
+            $kategori_id = (int)($_POST['kategori_id'] ?? 0);
+            $video_url = trim($_POST['video_url'] ?? '');
+            $kapak_resmi = trim($_POST['kapak_resmi'] ?? '');
+            $durum = $_POST['durum'] ?? 'aktif';
+            $goruntulenme_yetkisi = $_POST['goruntulenme_yetkisi'] ?? 'herkes';
             
-            if ($video && $video['kapak_resmi']) {
-                $file_path = '../uploads/thumbnails/' . $video['kapak_resmi'];
-                if (file_exists($file_path)) {
-                    unlink($file_path);
-                }
+            if (empty($baslik) || empty($video_url)) {
+                throw new Exception('Başlık ve video URL zorunludur.');
             }
             
-            // Videoyu sil
+            $stmt = $pdo->prepare("
+                INSERT INTO videolar (baslik, aciklama, kategori_id, video_url, kapak_resmi, durum, goruntulenme_yetkisi, ekleme_tarihi)
+                VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
+            ");
+            $stmt->execute([$baslik, $aciklama, $kategori_id, $video_url, $kapak_resmi, $durum, $goruntulenme_yetkisi]);
+            
+            $success_message = 'Video başarıyla eklendi.';
+            
+        } elseif ($action === 'update_video') {
+            $id = (int)($_POST['id'] ?? 0);
+            $baslik = trim($_POST['baslik'] ?? '');
+            $aciklama = trim($_POST['aciklama'] ?? '');
+            $kategori_id = (int)($_POST['kategori_id'] ?? 0);
+            $video_url = trim($_POST['video_url'] ?? '');
+            $kapak_resmi = trim($_POST['kapak_resmi'] ?? '');
+            $durum = $_POST['durum'] ?? 'aktif';
+            $goruntulenme_yetkisi = $_POST['goruntulenme_yetkisi'] ?? 'herkes';
+            
+            if ($id <= 0 || empty($baslik) || empty($video_url)) {
+                throw new Exception('Geçersiz video ID veya eksik bilgiler.');
+            }
+            
+            $stmt = $pdo->prepare("
+                UPDATE videolar 
+                SET baslik = ?, aciklama = ?, kategori_id = ?, video_url = ?, kapak_resmi = ?, durum = ?, goruntulenme_yetkisi = ?
+                WHERE id = ?
+            ");
+            $stmt->execute([$baslik, $aciklama, $kategori_id, $video_url, $kapak_resmi, $durum, $goruntulenme_yetkisi, $id]);
+            
+            $success_message = 'Video başarıyla güncellendi.';
+            
+        } elseif ($action === 'delete_video') {
+            $id = (int)($_POST['id'] ?? 0);
+            
+            if ($id <= 0) {
+                throw new Exception('Geçersiz video ID.');
+            }
+            
             $stmt = $pdo->prepare("DELETE FROM videolar WHERE id = ?");
-            $stmt->execute([$video_id]);
+            $stmt->execute([$id]);
             
             $success_message = 'Video başarıyla silindi.';
-        } catch (PDOException $e) {
-            $error_message = 'Video silinirken hata oluştu: ' . $e->getMessage();
         }
+        
+    } catch (Exception $e) {
+        $error_message = $e->getMessage();
     }
 }
 
 // Sayfalama
-$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-$per_page = 20;
+$page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
+$per_page = 10;
 $offset = ($page - 1) * $per_page;
 
-// Filtreleme
+// Arama
+$search = trim($_GET['search'] ?? '');
+$category_filter = (int)($_GET['category'] ?? 0);
+$status_filter = $_GET['status'] ?? '';
+
+// Filtreli sorgu oluştur
 $where_conditions = [];
 $params = [];
 
-if (!empty($_GET['search'])) {
-    $where_conditions[] = "(v.baslik LIKE ? OR v.aciklama LIKE ?)";
-    $search_param = '%' . $_GET['search'] . '%';
-    $params[] = $search_param;
-    $params[] = $search_param;
+if (!empty($search)) {
+    $where_conditions[] = "(baslik LIKE ? OR aciklama LIKE ?)";
+    $params[] = "%$search%";
+    $params[] = "%$search%";
 }
 
-if (!empty($_GET['kategori'])) {
-    $where_conditions[] = "v.kategori_id = ?";
-    $params[] = $_GET['kategori'];
+if ($category_filter > 0) {
+    $where_conditions[] = "kategori_id = ?";
+    $params[] = $category_filter;
 }
 
-if (!empty($_GET['durum'])) {
-    $where_conditions[] = "v.durum = ?";
-    $params[] = $_GET['durum'];
+if (!empty($status_filter)) {
+    $where_conditions[] = "durum = ?";
+    $params[] = $status_filter;
 }
 
 $where_clause = !empty($where_conditions) ? 'WHERE ' . implode(' AND ', $where_conditions) : '';
 
-// Videoları çek
-$query = "
-    SELECT v.*, k.kategori_adi 
-    FROM videolar v 
-    LEFT JOIN kategoriler k ON v.kategori_id = k.id 
-    $where_clause
-    ORDER BY v.ekleme_tarihi DESC 
-    LIMIT $per_page OFFSET $offset
-";
-
-$stmt = $pdo->prepare($query);
-$stmt->execute($params);
-$videos = $stmt->fetchAll();
-
 // Toplam video sayısı
-$count_query = "SELECT COUNT(*) FROM videolar v LEFT JOIN kategoriler k ON v.kategori_id = k.id $where_clause";
-$count_stmt = $pdo->prepare($count_query);
+$count_sql = "SELECT COUNT(*) FROM videolar $where_clause";
+$count_stmt = $pdo->prepare($count_sql);
 $count_stmt->execute($params);
 $total_videos = $count_stmt->fetchColumn();
 $total_pages = ceil($total_videos / $per_page);
 
-// Kategorileri çek
-$categories = $pdo->query("SELECT * FROM kategoriler WHERE durum = 'aktif' ORDER BY kategori_adi")->fetchAll();
+// Videoları çek
+$videos_sql = "
+    SELECT v.*, k.kategori_adi 
+    FROM videolar v 
+    LEFT JOIN kategoriler k ON v.kategori_id = k.id 
+    $where_clause 
+    ORDER BY v.ekleme_tarihi DESC 
+    LIMIT $per_page OFFSET $offset
+";
+$videos_stmt = $pdo->prepare($videos_sql);
+$videos_stmt->execute($params);
+$videos = $videos_stmt->fetchAll();
 
-include 'includes/header.php';
+// Kategorileri çek
+$categories = $pdo->query("SELECT * FROM kategoriler WHERE durum = 'aktif' ORDER BY kategori_adi ASC")->fetchAll();
+
 ?>
 
-<div class="admin-content">
-    <div class="content-header">
-        <div class="content-title">
-            <h1><i class="fas fa-video"></i> Video Yönetimi</h1>
-            <p>Sisteme eklenen videoları yönetin, düzenleyin ve yeni video ekleyin.</p>
-        </div>
-        <div class="content-actions">
-            <button class="btn btn-primary" onclick="openVideoModal()">
-                <i class="fas fa-plus"></i> Yeni Video Ekle
-            </button>
-        </div>
-    </div>
-
-    <?php if ($success_message): ?>
-    <div class="alert alert-success">
-        <i class="fas fa-check-circle"></i>
-        <?php echo $success_message; ?>
-    </div>
-    <?php endif; ?>
-
-    <?php if ($error_message): ?>
-    <div class="alert alert-error">
-        <i class="fas fa-exclamation-circle"></i>
-        <?php echo $error_message; ?>
-    </div>
-    <?php endif; ?>
-
-    <!-- Filtreler -->
-    <div class="filters-card">
-        <form method="GET" class="filters-form">
-            <div class="filter-group">
-                <input type="text" name="search" value="<?php echo safeOutput($_GET['search'] ?? ''); ?>" 
-                       placeholder="Video ara...">
-            </div>
-            
-            <div class="filter-group">
-                <select name="kategori">
-                    <option value="">Tüm Kategoriler</option>
-                    <?php foreach ($categories as $category): ?>
-                    <option value="<?php echo $category['id']; ?>" 
-                            <?php echo ($_GET['kategori'] ?? '') == $category['id'] ? 'selected' : ''; ?>>
-                        <?php echo safeOutput($category['kategori_adi']); ?>
-                    </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            
-            <div class="filter-group">
-                <select name="durum">
-                    <option value="">Tüm Durumlar</option>
-                    <option value="aktif" <?php echo ($_GET['durum'] ?? '') === 'aktif' ? 'selected' : ''; ?>>Aktif</option>
-                    <option value="pasif" <?php echo ($_GET['durum'] ?? '') === 'pasif' ? 'selected' : ''; ?>>Pasif</option>
-                </select>
-            </div>
-            
-            <div class="filter-actions">
-                <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-search"></i> Filtrele
-                </button>
-                <a href="videolar.php" class="btn btn-outline">
-                    <i class="fas fa-times"></i> Temizle
-                </a>
-            </div>
-        </form>
-    </div>
-
-    <!-- Video Listesi -->
-    <div class="data-card">
-        <div class="card-header">
-            <h3>Videolar (<?php echo number_format($total_videos); ?>)</h3>
-        </div>
-        
-        <div class="table-responsive">
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Kapak</th>
-                        <th>Başlık</th>
-                        <th>Kategori</th>
-                        <th>Yetki</th>
-                        <th>İstatistik</th>
-                        <th>Tarih</th>
-                        <th>Durum</th>
-                        <th>İşlemler</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($videos as $video): ?>
-                    <tr>
-                        <td>
-                            <div class="video-thumbnail">
-                                <?php if ($video['kapak_resmi']): ?>
-                                <img src="../uploads/thumbnails/<?php echo $video['kapak_resmi']; ?>" 
-                                     alt="<?php echo safeOutput($video['baslik']); ?>">
-                                <?php else: ?>
-                                <div class="no-thumbnail">
-                                    <i class="fas fa-video"></i>
-                                </div>
-                                <?php endif; ?>
-                            </div>
-                        </td>
-                        <td>
-                            <div class="video-info">
-                                <strong><?php echo safeOutput($video['baslik']); ?></strong>
-                                <?php if ($video['ozellik'] != 'normal'): ?>
-                                <span class="badge badge-<?php echo $video['ozellik']; ?>">
-                                    <?php echo ucfirst($video['ozellik']); ?>
-                                </span>
-                                <?php endif; ?>
-                                <?php if ($video['aciklama']): ?>
-                                <p><?php echo safeOutput(substr($video['aciklama'], 0, 100)); ?>...</p>
-                                <?php endif; ?>
-                            </div>
-                        </td>
-                        <td>
-                            <?php echo $video['kategori_adi'] ? safeOutput($video['kategori_adi']) : 'Kategorisiz'; ?>
-                        </td>
-                        <td>
-                            <span class="access-level access-<?php echo $video['goruntulenme_yetkisi']; ?>">
-                                <?php
-                                echo match($video['goruntulenme_yetkisi']) {
-                                    'herkes' => '720p',
-                                    'vip' => '1080p',
-                                    'premium' => '4K',
-                                    default => 'Bilinmiyor'
-                                };
-                                ?>
-                            </span>
-                        </td>
-                        <td>
-                            <div class="video-stats">
-                                <span title="İzlenme"><i class="fas fa-eye"></i> <?php echo number_format($video['izlenme_sayisi']); ?></span>
-                                <span title="Beğeni"><i class="fas fa-thumbs-up"></i> <?php echo number_format($video['begeni_sayisi']); ?></span>
-                            </div>
-                        </td>
-                        <td>
-                            <span class="date"><?php echo formatDate($video['ekleme_tarihi'], 'd.m.Y'); ?></span>
-                            <small><?php echo formatDate($video['ekleme_tarihi'], 'H:i'); ?></small>
-                        </td>
-                        <td>
-                            <span class="status status-<?php echo $video['durum']; ?>">
-                                <?php echo ucfirst($video['durum']); ?>
-                            </span>
-                        </td>
-                        <td>
-                            <div class="action-buttons">
-                                <button class="btn-icon btn-primary" onclick="editVideo(<?php echo $video['id']; ?>)" 
-                                        title="Düzenle">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <a href="../video.php?id=<?php echo $video['id']; ?>" class="btn-icon btn-info" 
-                                   title="Görüntüle" target="_blank">
-                                    <i class="fas fa-eye"></i>
-                                </a>
-                                <button class="btn-icon btn-danger" onclick="deleteVideo(<?php echo $video['id']; ?>)" 
-                                        title="Sil">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
-
-        <!-- Sayfalama -->
-        <?php if ($total_pages > 1): ?>
-        <div class="pagination">
-            <?php for ($i = 1; $i <= $total_pages; $i++): ?>
-            <a href="?page=<?php echo $i; ?>&<?php echo http_build_query(array_filter($_GET, fn($k) => $k !== 'page', ARRAY_FILTER_USE_KEY)); ?>" 
-               class="page-link <?php echo $i == $page ? 'active' : ''; ?>">
-                <?php echo $i; ?>
-            </a>
-            <?php endfor; ?>
-        </div>
-        <?php endif; ?>
-    </div>
-</div>
-
-<!-- Video Modal -->
-<div class="modal" id="videoModal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3 id="modalTitle">Yeni Video Ekle</h3>
-            <button class="modal-close" onclick="closeVideoModal()">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-        
-        <form id="videoForm" method="POST" enctype="multipart/form-data">
-            <input type="hidden" name="video_id" id="video_id">
-            
-            <div class="form-grid">
-                <div class="form-group">
-                    <label for="baslik">Başlık *</label>
-                    <input type="text" name="baslik" id="baslik" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="kategori_id">Kategori</label>
-                    <select name="kategori_id" id="kategori_id">
-                        <option value="">Kategori Seçin</option>
-                        <?php foreach ($categories as $category): ?>
-                        <option value="<?php echo $category['id']; ?>"><?php echo safeOutput($category['kategori_adi']); ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label for="aciklama">Açıklama</label>
-                <textarea name="aciklama" id="aciklama" rows="3"></textarea>
-            </div>
-            
-            <div class="form-grid">
-                <div class="form-group">
-                    <label for="video_url">Video URL *</label>
-                    <input type="url" name="video_url" id="video_url" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="sure">Süre (saniye)</label>
-                    <input type="number" name="sure" id="sure" min="0">
-                </div>
-            </div>
-            
-            <div class="form-grid">
-                <div class="form-group">
-                    <label for="goruntulenme_yetkisi">Görüntülenme Yetkisi</label>
-                    <select name="goruntulenme_yetkisi" id="goruntulenme_yetkisi">
-                        <option value="herkes">Herkes (720p)</option>
-                        <option value="vip">VIP (1080p)</option>
-                        <option value="premium">Premium (4K)</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label for="ozellik">Özellik</label>
-                    <select name="ozellik" id="ozellik">
-                        <option value="normal">Normal</option>
-                        <option value="yeni">Yeni</option>
-                        <option value="populer">Popüler</option>
-                        <option value="editor_secimi">Editör Seçimi</option>
-                    </select>
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label for="etiketler">Etiketler (virgülle ayırın)</label>
-                <input type="text" name="etiketler" id="etiketler" placeholder="aksiyon, macera, gerilim">
-            </div>
-            
-            <div class="form-group">
-                <label for="kapak_resmi">Kapak Resmi</label>
-                <input type="file" name="kapak_resmi" id="kapak_resmi" accept="image/*">
-                <small>JPG, PNG veya WebP formatında olmalıdır.</small>
-            </div>
-            
-            <div class="form-group" id="durumGroup" style="display: none;">
-                <label for="durum">Durum</label>
-                <select name="durum" id="durum">
-                    <option value="aktif">Aktif</option>
-                    <option value="pasif">Pasif</option>
-                </select>
-            </div>
-            
-            <div class="modal-actions">
-                <button type="submit" name="add_video" id="submitBtn" class="btn btn-primary">
-                    <i class="fas fa-save"></i> Kaydet
-                </button>
-                <button type="button" class="btn btn-outline" onclick="closeVideoModal()">
-                    İptal
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<style>
-.video-thumbnail {
-    width: 60px;
-    height: 40px;
-    border-radius: 4px;
-    overflow: hidden;
-}
-
-.video-thumbnail img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.no-thumbnail {
-    width: 100%;
-    height: 100%;
-    background: rgba(255, 255, 255, 0.1);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: rgba(255, 255, 255, 0.5);
-}
-
-.video-info strong {
-    display: block;
-    margin-bottom: 4px;
-}
-
-.video-info p {
-    margin: 0;
-    color: rgba(255, 255, 255, 0.6);
-    font-size: 0.8rem;
-}
-
-.badge {
-    display: inline-block;
-    padding: 2px 6px;
-    border-radius: 3px;
-    font-size: 0.7rem;
-    font-weight: 500;
-    margin-left: 8px;
-}
-
-.badge-yeni { background: #20c997; color: #fff; }
-.badge-populer { background: #ff6b35; color: #fff; }
-.badge-editor_secimi { background: #6f42c1; color: #fff; }
-
-.access-level {
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 0.8rem;
-    font-weight: 600;
-}
-
-.access-herkes { background: #28a745; color: #fff; }
-.access-vip { background: #ffc107; color: #000; }
-.access-premium { background: #dc3545; color: #fff; }
-
-.video-stats {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.video-stats span {
-    font-size: 0.8rem;
-    color: rgba(255, 255, 255, 0.7);
-}
-
-.video-stats i {
-    width: 12px;
-    color: var(--primary-color);
-    margin-right: 4px;
-}
-
-.date {
-    display: block;
-    font-weight: 500;
-}
-
-.date + small {
-    color: rgba(255, 255, 255, 0.6);
-}
-
-.form-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-}
-
-@media (max-width: 768px) {
-    .form-grid {
-        grid-template-columns: 1fr;
-    }
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><?php echo $page_title; ?> - DOBİEN Admin</title>
+    <link rel="stylesheet" href="assets/css/admin.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <?php include 'includes/admin-header.php'; ?>
     
-    .content-header {
-        flex-direction: column;
-        gap: 15px;
-    }
-}
-</style>
+    <div class="admin-container">
+        <div class="admin-content">
+            <div class="page-header">
+                <h1><i class="fas fa-video me-2"></i>Video Yönetimi</h1>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addVideoModal">
+                    <i class="fas fa-plus me-2"></i>Yeni Video Ekle
+                </button>
+            </div>
 
-<script>
-function openVideoModal() {
-    document.getElementById('modalTitle').textContent = 'Yeni Video Ekle';
-    document.getElementById('videoForm').reset();
-    document.getElementById('video_id').value = '';
-    document.getElementById('submitBtn').innerHTML = '<i class="fas fa-save"></i> Kaydet';
-    document.getElementById('submitBtn').name = 'add_video';
-    document.getElementById('durumGroup').style.display = 'none';
-    document.getElementById('videoModal').style.display = 'flex';
-}
+            <?php if (isset($success_message)): ?>
+                <div class="alert alert-success alert-dismissible fade show">
+                    <i class="fas fa-check-circle me-2"></i><?php echo $success_message; ?>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            <?php endif; ?>
 
-function editVideo(id) {
-    // AJAX ile video bilgilerini çek ve formu doldur
-    fetch(`get_video.php?id=${id}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                const video = data.video;
-                document.getElementById('modalTitle').textContent = 'Video Düzenle';
-                document.getElementById('video_id').value = video.id;
-                document.getElementById('baslik').value = video.baslik;
-                document.getElementById('aciklama').value = video.aciklama || '';
-                document.getElementById('kategori_id').value = video.kategori_id || '';
-                document.getElementById('video_url').value = video.video_url;
-                document.getElementById('sure').value = video.sure || '';
-                document.getElementById('goruntulenme_yetkisi').value = video.goruntulenme_yetkisi;
-                document.getElementById('ozellik').value = video.ozellik;
-                document.getElementById('etiketler').value = video.etiketler || '';
-                document.getElementById('durum').value = video.durum;
-                document.getElementById('durumGroup').style.display = 'block';
-                document.getElementById('submitBtn').innerHTML = '<i class="fas fa-save"></i> Güncelle';
-                document.getElementById('submitBtn').name = 'update_video';
-                document.getElementById('videoModal').style.display = 'flex';
+            <?php if (isset($error_message)): ?>
+                <div class="alert alert-danger alert-dismissible fade show">
+                    <i class="fas fa-exclamation-circle me-2"></i><?php echo $error_message; ?>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            <?php endif; ?>
+
+            <!-- Filtreler -->
+            <div class="filters-section mb-4">
+                <form method="GET" class="row g-3">
+                    <div class="col-md-4">
+                        <input type="text" class="form-control" name="search" placeholder="Video ara..." 
+                               value="<?php echo htmlspecialchars($search); ?>">
+                    </div>
+                    <div class="col-md-3">
+                        <select name="category" class="form-select">
+                            <option value="">Tüm Kategoriler</option>
+                            <?php foreach ($categories as $category): ?>
+                                <option value="<?php echo $category['id']; ?>" 
+                                        <?php echo $category_filter == $category['id'] ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($category['kategori_adi']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select name="status" class="form-select">
+                            <option value="">Tüm Durumlar</option>
+                            <option value="aktif" <?php echo $status_filter === 'aktif' ? 'selected' : ''; ?>>Aktif</option>
+                            <option value="pasif" <?php echo $status_filter === 'pasif' ? 'selected' : ''; ?>>Pasif</option>
+                            <option value="beklemede" <?php echo $status_filter === 'beklemede' ? 'selected' : ''; ?>>Beklemede</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-outline-primary w-100">
+                            <i class="fas fa-search"></i> Filtrele
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Video Listesi -->
+            <div class="card">
+                <div class="card-body">
+                    <?php if (!empty($videos)): ?>
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Kapak</th>
+                                        <th>Başlık</th>
+                                        <th>Kategori</th>
+                                        <th>Durum</th>
+                                        <th>İzlenme</th>
+                                        <th>Tarih</th>
+                                        <th>İşlemler</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($videos as $video): ?>
+                                        <tr>
+                                            <td>
+                                                <img src="<?php echo htmlspecialchars($video['kapak_resmi'] ?: '../assets/images/default-thumbnail.jpg'); ?>" 
+                                                     alt="Kapak" class="thumbnail" style="width: 60px; height: 40px; object-fit: cover;">
+                                            </td>
+                                            <td>
+                                                <strong><?php echo htmlspecialchars($video['baslik']); ?></strong>
+                                                <?php if ($video['goruntulenme_yetkisi'] !== 'herkes'): ?>
+                                                    <span class="badge bg-warning text-dark ms-1"><?php echo strtoupper($video['goruntulenme_yetkisi']); ?></span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td><?php echo htmlspecialchars($video['kategori_adi'] ?: 'Kategori Yok'); ?></td>
+                                            <td>
+                                                <span class="badge bg-<?php echo $video['durum'] === 'aktif' ? 'success' : ($video['durum'] === 'beklemede' ? 'warning' : 'danger'); ?>">
+                                                    <?php echo ucfirst($video['durum']); ?>
+                                                </span>
+                                            </td>
+                                            <td><?php echo number_format($video['izlenme_sayisi'] ?? 0); ?></td>
+                                            <td><?php echo date('d.m.Y', strtotime($video['ekleme_tarihi'])); ?></td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm">
+                                                    <button class="btn btn-outline-primary" onclick="editVideo(<?php echo $video['id']; ?>)">
+                                                        <i class="fas fa-edit"></i>
+                                                    </button>
+                                                    <button class="btn btn-outline-danger" onclick="deleteVideo(<?php echo $video['id']; ?>)">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                    <a href="../video.php?id=<?php echo $video['id']; ?>" class="btn btn-outline-info" target="_blank">
+                                                        <i class="fas fa-eye"></i>
+                                                    </a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Pagination -->
+                        <?php if ($total_pages > 1): ?>
+                            <nav>
+                                <ul class="pagination justify-content-center">
+                                    <?php for ($i = 1; $i <= $total_pages; $i++): ?>
+                                        <li class="page-item <?php echo $i === $page ? 'active' : ''; ?>">
+                                            <a class="page-link" href="?page=<?php echo $i; ?>&search=<?php echo urlencode($search); ?>&category=<?php echo $category_filter; ?>&status=<?php echo urlencode($status_filter); ?>">
+                                                <?php echo $i; ?>
+                                            </a>
+                                        </li>
+                                    <?php endfor; ?>
+                                </ul>
+                            </nav>
+                        <?php endif; ?>
+
+                    <?php else: ?>
+                        <div class="text-center py-5">
+                            <i class="fas fa-video fa-3x text-muted mb-3"></i>
+                            <h4>Hiç video bulunamadı</h4>
+                            <p class="text-muted">Yeni video eklemek için yukarıdaki butonu kullanın.</p>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Video Ekleme Modal -->
+    <div class="modal fade" id="addVideoModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Yeni Video Ekle</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="POST">
+                    <div class="modal-body">
+                        <input type="hidden" name="action" value="add_video">
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Video Başlığı *</label>
+                                <input type="text" class="form-control" name="baslik" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Kategori</label>
+                                <select name="kategori_id" class="form-select">
+                                    <option value="0">Kategori Seçin</option>
+                                    <?php foreach ($categories as $category): ?>
+                                        <option value="<?php echo $category['id']; ?>">
+                                            <?php echo htmlspecialchars($category['kategori_adi']); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Video URL *</label>
+                            <input type="url" class="form-control" name="video_url" required 
+                                   placeholder="https://example.com/video.mp4">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Kapak Resmi URL</label>
+                            <input type="url" class="form-control" name="kapak_resmi" 
+                                   placeholder="https://example.com/thumbnail.jpg">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Açıklama</label>
+                            <textarea class="form-control" name="aciklama" rows="4"></textarea>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Durum</label>
+                                <select name="durum" class="form-select">
+                                    <option value="aktif">Aktif</option>
+                                    <option value="pasif">Pasif</option>
+                                    <option value="beklemede">Beklemede</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Görüntülenme Yetkisi</label>
+                                <select name="goruntulenme_yetkisi" class="form-select">
+                                    <option value="herkes">Herkes</option>
+                                    <option value="vip">VIP Üyeler</option>
+                                    <option value="premium">Premium Üyeler</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Video Ekle
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function deleteVideo(id) {
+            if (confirm('Bu videoyu silmek istediğinizden emin misiniz?')) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.innerHTML = `
+                    <input type="hidden" name="action" value="delete_video">
+                    <input type="hidden" name="id" value="${id}">
+                `;
+                document.body.appendChild(form);
+                form.submit();
             }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Video bilgileri yüklenirken hata oluştu.');
-        });
-}
+        }
 
-function deleteVideo(id) {
-    if (confirm('Bu videoyu silmek istediğinizden emin misiniz?')) {
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.innerHTML = `
-            <input type="hidden" name="video_id" value="${id}">
-            <input type="hidden" name="delete_video" value="1">
-        `;
-        document.body.appendChild(form);
-        form.submit();
-    }
-}
-
-function closeVideoModal() {
-    document.getElementById('videoModal').style.display = 'none';
-}
-
-// Modal dışına tıklayınca kapat
-document.getElementById('videoModal').addEventListener('click', function(e) {
-    if (e.target === this) {
-        closeVideoModal();
-    }
-});
-</script>
-
-<?php include 'includes/footer.php'; ?>
+        function editVideo(id) {
+            // Düzenleme modalı buraya eklenebilir
+            alert('Düzenleme özelliği yakında eklenecek!');
+        }
+    </script>
+</body>
+</html>
