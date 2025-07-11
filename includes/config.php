@@ -5,13 +5,8 @@
  * Modern Video Paylaşım Platformu
  */
 
-// Session ayarlarını sadece session başlamadan önce yap
+// Session'ı başlat (session ayarları php.ini'de yapılmalı)
 if (session_status() == PHP_SESSION_NONE) {
-    // Session ayarları
-    @ini_set('session.cookie_httponly', 1);
-    @ini_set('session.cookie_secure', 0); // HTTPS için 1 yapın
-    @ini_set('session.use_strict_mode', 1);
-    
     session_start();
 }
 

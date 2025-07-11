@@ -78,8 +78,8 @@ if (defined('WP_DEBUG') && WP_DEBUG) {
 // Zaman Dilimi
 date_default_timezone_set('Europe/Istanbul');
 
-// Session ayarları artık includes/config.php'de yapılıyor
-// Burada session ayarları yapılmayacak çünkü session zaten başlamış olabilir
+// Session ayarları .htaccess dosyasında yapılıyor
+// PHP ini_set session aktifken çalışmadığı için .htaccess kullanıyoruz
 
 // Bellek limiti
 ini_set('memory_limit', '256M');

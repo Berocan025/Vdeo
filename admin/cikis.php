@@ -18,13 +18,6 @@ if (isset($_SESSION['admin_id'])) {
     
     // Session'ı tamamen temizle
     session_destroy();
-    
-    // Yeni session başlat
-    session_start();
-    
-    // Başarı mesajı
-    $_SESSION['message'] = 'Güvenli bir şekilde çıkış yaptınız.';
-    $_SESSION['message_type'] = 'success';
 }
 
 // Admin giriş sayfasına yönlendir
