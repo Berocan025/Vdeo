@@ -1,53 +1,91 @@
--- --------------------------------------------------------
--- DOBİEN Video Platform Database Structure
+-- DOBİEN Video Platform Database
 -- Geliştirici: DOBİEN
--- Modern Video Paylaşım Platformu Veritabanı
+-- Tam entegre database yapısı - tüm sorunlar çözüldü
 -- Tüm Hakları Saklıdır © DOBİEN
--- --------------------------------------------------------
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
 SET time_zone = "+00:00";
+
+-- Database: `dobien_video_platform`
+
+-- --------------------------------------------------------
+-- Admin Kullanıcıları Tablosu (Tüm alanlar mevcut)
+-- --------------------------------------------------------
+
+CREATE TABLE `admin_kullanicilar` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `ad` varchar(50) NOT NULL,
+  `soyad` varchar(50) NOT NULL,
+  `email` varchar(100) NOT NULL,
+  `kullanici_adi` varchar(100) NOT NULL,
+  `sifre` varchar(255) NOT NULL,
+  `rol` enum('admin','super_admin') NOT NULL DEFAULT 'admin',
+  `yetki_seviyesi` enum('admin','super_admin') NOT NULL DEFAULT 'admin',
+  `avatar` varchar(255) DEFAULT NULL,
+  `profil_resmi` varchar(255) DEFAULT NULL,
+  `durum` enum('aktif','pasif') NOT NULL DEFAULT 'aktif',
+  `son_giris_tarihi` timestamp NULL DEFAULT NULL,
+  `son_giris_ip` varchar(45) DEFAULT NULL,
+  `olusturma_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `guncelleme_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `email` (`email`),
+  UNIQUE KEY `kullanici_adi` (`kullanici_adi`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Varsayılan admin kullanıcı
+INSERT INTO `admin_kullanicilar` (`ad`, `soyad`, `email`, `kullanici_adi`, `sifre`, `rol`, `yetki_seviyesi`, `durum`) VALUES
+('DOBİEN', 'Admin', 'admin@dobien.com', 'admin', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'super_admin', 'super_admin', 'aktif');
 
 -- --------------------------------------------------------
 -- Site Ayarları Tablosu
 -- --------------------------------------------------------
 
 CREATE TABLE `site_ayarlari` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `anahtar` varchar(100) NOT NULL,
   `deger` text,
   `aciklama` text,
-  `guncelleme_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  `kategori` varchar(50) DEFAULT 'genel',
+  `tip` enum('text','textarea','select','number','boolean','file') DEFAULT 'text',
+  `guncelleme_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `anahtar` (`anahtar`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO `site_ayarlari` (`anahtar`, `deger`, `aciklama`) VALUES
-('site_baslik', 'DOBİEN Video Platform', 'Site başlığı'),
-('site_aciklama', 'Premium video içeriklerini keşfedin. 4K kalite, VIP üyelik avantajları ve sınırsız izleme deneyimi.', 'Site açıklaması'),
-('site_anahtar_kelimeler', 'video platform, premium videolar, 4k video, vip üyelik, DOBİEN', 'SEO anahtar kelimeleri'),
-('site_logo', 'logo.png', 'Site logosu'),
-('site_favicon', 'favicon.ico', 'Site favicon'),
-('yas_dogrulama_aktif', '1', 'Yaş doğrulama popup aktif/pasif'),
-('yas_dogrulama_baslik', 'Yaş Doğrulama Gerekli', 'Yaş doğrulama popup başlığı'),
-('yas_dogrulama_mesaj', 'Bu siteye erişebilmeniz için 18 yaşından büyük olmanız gerekmektedir.', 'Yaş doğrulama mesajı'),
-('footer_metin', '© 2024 DOBİEN Video Platform. Tüm hakları saklıdır.', 'Footer metni'),
-('google_analytics', '', 'Google Analytics kodu'),
-('facebook_pixel', '', 'Facebook Pixel kodu'),
-('smtp_host', '', 'SMTP sunucu adresi'),
-('smtp_port', '587', 'SMTP port'),
-('smtp_kullanici', '', 'SMTP kullanıcı adı'),
-('smtp_sifre', '', 'SMTP şifresi'),
-('sistem_email', 'noreply@dobien.com', 'Sistem e-posta adresi'),
-('max_video_boyut', '500', 'Maksimum video boyutu (MB)'),
-('izin_verilen_formatlar', 'mp4,avi,mov,wmv', 'İzin verilen video formatları'),
-('varsayilan_video_kalite', '720p', 'Varsayılan video kalitesi');
+-- Site ayarları
+INSERT INTO `site_ayarlari` (`anahtar`, `deger`, `aciklama`, `kategori`, `tip`) VALUES
+('site_baslik', 'DOBİEN Video Platform', 'Site başlığı', 'genel', 'text'),
+('site_aciklama', 'Modern Video Paylaşım Platformu - Premium kalitede video deneyimi', 'Site açıklaması', 'genel', 'textarea'),
+('site_anahtar_kelimeler', 'video platform, premium videolar, 4k video, vip üyelik, DOBİEN', 'SEO anahtar kelimeleri', 'seo', 'textarea'),
+('site_logo', '', 'Site logosu', 'genel', 'file'),
+('site_favicon', '', 'Site favicon', 'genel', 'file'),
+('footer_metin', 'DOBİEN tarafından geliştirildi. Tüm hakları saklıdır.', 'Footer metni', 'genel', 'text'),
+('yas_dogrulama_aktif', '1', 'Yaş doğrulama popup aktif/pasif', 'güvenlik', 'boolean'),
+('yas_dogrulama_baslik', 'Yaş Doğrulama Gerekli', 'Yaş doğrulama popup başlığı', 'güvenlik', 'text'),
+('yas_dogrulama_mesaj', 'Bu siteye erişebilmeniz için 18 yaşından büyük olmanız gerekmektedir.', 'Yaş doğrulama mesajı', 'güvenlik', 'textarea'),
+('google_analytics', '', 'Google Analytics kodu', 'analitik', 'textarea'),
+('meta_verification', '', 'Site doğrulama kodları', 'seo', 'textarea'),
+('sistem_email', 'admin@dobien.com', 'Sistem e-posta adresi', 'sistem', 'text'),
+('smtp_host', 'localhost', 'SMTP sunucu adresi', 'email', 'text'),
+('smtp_port', '587', 'SMTP port', 'email', 'number'),
+('smtp_username', '', 'SMTP kullanıcı adı', 'email', 'text'),
+('smtp_password', '', 'SMTP şifresi', 'email', 'text'),
+('max_video_boyut', '500', 'Maksimum video boyutu (MB)', 'upload', 'number'),
+('izin_verilen_formatlar', 'mp4,avi,mov,wmv,flv', 'İzin verilen video formatları', 'upload', 'text'),
+('varsayilan_video_kalite', '720p', 'Varsayılan video kalitesi', 'video', 'select'),
+('cache_suresi', '3600', 'Cache süresi (saniye)', 'performans', 'number'),
+('maintenance_mode', '0', 'Bakım modu', 'sistem', 'boolean'),
+('user_registration', '1', 'Kullanıcı kayıt izni', 'kullanici', 'boolean'),
+('comment_moderation', '1', 'Yorum moderasyonu', 'içerik', 'boolean');
 
 -- --------------------------------------------------------
 -- Kullanıcılar Tablosu
 -- --------------------------------------------------------
 
 CREATE TABLE `kullanicilar` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `ad` varchar(50) NOT NULL,
   `soyad` varchar(50) NOT NULL,
   `email` varchar(100) NOT NULL,
@@ -56,151 +94,121 @@ CREATE TABLE `kullanicilar` (
   `dogum_tarihi` date DEFAULT NULL,
   `cinsiyet` enum('erkek','kadın','belirtmek_istemiyorum') DEFAULT NULL,
   `profil_resmi` varchar(255) DEFAULT NULL,
+  `kapak_resmi` varchar(255) DEFAULT NULL,
+  `bio` text,
   `uyelik_tipi` enum('kullanici','vip','premium') NOT NULL DEFAULT 'kullanici',
   `uyelik_baslangic` timestamp NULL DEFAULT NULL,
-  `uyelik_bitis` timestamp NULL DEFAULT NULL,
+  `vip_bitis` timestamp NULL DEFAULT NULL,
+  `premium_bitis` timestamp NULL DEFAULT NULL,
   `durum` enum('aktif','pasif','beklemede','yasakli') NOT NULL DEFAULT 'beklemede',
   `aktivasyon_kodu` varchar(100) DEFAULT NULL,
+  `sifre_sifirlama_token` varchar(100) DEFAULT NULL,
+  `sifre_sifirlama_tarih` timestamp NULL DEFAULT NULL,
   `remember_token` varchar(100) DEFAULT NULL,
   `newsletter_izni` tinyint(1) NOT NULL DEFAULT '0',
+  `bildirim_izni` tinyint(1) NOT NULL DEFAULT '1',
   `son_giris_tarihi` timestamp NULL DEFAULT NULL,
   `son_giris_ip` varchar(45) DEFAULT NULL,
+  `toplam_izleme_suresi` bigint(20) DEFAULT '0',
+  `toplam_begeni` int(11) DEFAULT '0',
+  `toplam_yorum` int(11) DEFAULT '0',
   `kayit_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `guncelleme_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  `guncelleme_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `email` (`email`),
+  KEY `uyelik_tipi` (`uyelik_tipi`),
+  KEY `durum` (`durum`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Demo kullanıcı (şifre: demo123)
-INSERT INTO `kullanicilar` (`ad`, `soyad`, `email`, `sifre`, `uyelik_tipi`, `durum`) VALUES
-('Demo', 'Kullanıcı', 'demo@dobien.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'premium', 'aktif');
-
--- --------------------------------------------------------
--- Admin Kullanıcılar Tablosu
--- --------------------------------------------------------
-
-CREATE TABLE `admin_kullanicilar` (
-  `id` int(11) NOT NULL,
-  `ad` varchar(50) NOT NULL,
-  `soyad` varchar(50) NOT NULL,
-  `email` varchar(100) NOT NULL,
-  `sifre` varchar(255) NOT NULL,
-  `yetki_seviyesi` enum('super_admin','admin','moderator') NOT NULL DEFAULT 'admin',
-  `profil_resmi` varchar(255) DEFAULT NULL,
-  `durum` enum('aktif','pasif') NOT NULL DEFAULT 'aktif',
-  `son_giris_tarihi` timestamp NULL DEFAULT NULL,
-  `son_giris_ip` varchar(45) DEFAULT NULL,
-  `olusturma_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `guncelleme_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Demo admin (şifre: admin123)
-INSERT INTO `admin_kullanicilar` (`ad`, `soyad`, `email`, `sifre`, `yetki_seviyesi`) VALUES
-('DOBİEN', 'Admin', 'admin@dobien.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'super_admin');
 
 -- --------------------------------------------------------
 -- Kategoriler Tablosu
 -- --------------------------------------------------------
 
 CREATE TABLE `kategoriler` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `kategori_adi` varchar(100) NOT NULL,
   `slug` varchar(100) NOT NULL,
   `aciklama` text,
   `resim` varchar(255) DEFAULT NULL,
+  `banner_resmi` varchar(255) DEFAULT NULL,
+  `renk` varchar(7) DEFAULT '#6c5ce7',
+  `icon` varchar(50) DEFAULT 'fas fa-play',
   `siralama` int(11) NOT NULL DEFAULT '0',
   `durum` enum('aktif','pasif') NOT NULL DEFAULT 'aktif',
+  `video_sayisi` int(11) DEFAULT '0',
+  `seo_title` varchar(255) DEFAULT NULL,
+  `seo_description` text DEFAULT NULL,
+  `seo_keywords` text DEFAULT NULL,
   `olusturma_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `guncelleme_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  `guncelleme_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `slug` (`slug`),
+  KEY `durum` (`durum`),
+  KEY `siralama` (`siralama`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO `kategoriler` (`kategori_adi`, `slug`, `aciklama`, `siralama`) VALUES
-('Aksiyon', 'aksiyon', 'Heyecan dolu aksiyon videoları', 1),
-('Drama', 'drama', 'Duygusal drama içerikleri', 2),
-('Komedi', 'komedi', 'Eğlenceli komedi videoları', 3),
-('Korku', 'korku', 'Gerilim dolu korku filmleri', 4),
-('Romantik', 'romantik', 'Aşk temalı romantik içerikler', 5),
-('Bilim Kurgu', 'bilim-kurgu', 'Gelecek ve teknoloji temalı yapımlar', 6),
-('Belgesel', 'belgesel', 'Eğitici belgesel videoları', 7),
-('Müzik', 'muzik', 'Müzik videoları ve konserler', 8);
+-- Varsayılan kategoriler
+INSERT INTO `kategoriler` (`kategori_adi`, `slug`, `aciklama`, `siralama`, `durum`, `renk`, `icon`) VALUES
+('Genel', 'genel', 'Genel video içerikleri', 1, 'aktif', '#6c5ce7', 'fas fa-play'),
+('Eğitim', 'egitim', 'Eğitici ve öğretici videolar', 2, 'aktif', '#00b894', 'fas fa-graduation-cap'),
+('Eğlence', 'eglence', 'Eğlenceli video içerikleri', 3, 'aktif', '#e17055', 'fas fa-laugh'),
+('Spor', 'spor', 'Spor videoları ve maçlar', 4, 'aktif', '#0984e3', 'fas fa-running'),
+('Müzik', 'muzik', 'Müzik videoları ve konsérler', 5, 'aktif', '#a29bfe', 'fas fa-music'),
+('Teknoloji', 'teknoloji', 'Teknoloji ve inovasyon', 6, 'aktif', '#636e72', 'fas fa-laptop');
 
 -- --------------------------------------------------------
 -- Videolar Tablosu
 -- --------------------------------------------------------
 
 CREATE TABLE `videolar` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `baslik` varchar(255) NOT NULL,
   `slug` varchar(255) NOT NULL,
   `aciklama` text,
   `kategori_id` int(11) DEFAULT NULL,
+  `uploader_id` int(11) DEFAULT NULL,
   `kapak_resmi` varchar(255) DEFAULT NULL,
+  `video_dosyasi` varchar(255) NOT NULL,
+  `video_url` varchar(500) DEFAULT NULL,
   `video_dosyasi_720p` varchar(255) DEFAULT NULL,
   `video_dosyasi_1080p` varchar(255) DEFAULT NULL,
   `video_dosyasi_4k` varchar(255) DEFAULT NULL,
-  `sure` time DEFAULT NULL,
+  `sure` int(11) DEFAULT NULL COMMENT 'Saniye cinsinden',
   `dosya_boyutu` bigint(20) DEFAULT NULL,
   `goruntulenme_yetkisi` enum('herkes','vip','premium') NOT NULL DEFAULT 'herkes',
-  `ozellik` enum('normal','populer','editor_secimi','yeni') DEFAULT 'normal',
+  `ozellik` enum('normal','populer','editor_secimi','yeni','ozel') DEFAULT 'normal',
   `etiketler` text,
+  `thumbnail_grid` text COMMENT 'Thumbnail ızgara pozisyonları',
   `izlenme_sayisi` bigint(20) NOT NULL DEFAULT '0',
   `begeni_sayisi` bigint(20) NOT NULL DEFAULT '0',
   `begenme_sayisi` bigint(20) NOT NULL DEFAULT '0',
   `favori_sayisi` bigint(20) NOT NULL DEFAULT '0',
+  `yorum_sayisi` int(11) NOT NULL DEFAULT '0',
+  `paylaşım_sayisi` int(11) NOT NULL DEFAULT '0',
   `sikayet_sayisi` int(11) NOT NULL DEFAULT '0',
-  `durum` enum('aktif','pasif','beklemede','silinmis') NOT NULL DEFAULT 'beklemede',
+  `kalite` enum('480p','720p','1080p','4k') DEFAULT '720p',
+  `dil` varchar(10) DEFAULT 'tr',
+  `altyazi_dosyasi` varchar(255) DEFAULT NULL,
+  `durum` enum('aktif','pasif','beklemede','silinmis','gizli') NOT NULL DEFAULT 'beklemede',
+  `moderasyon_notu` text,
+  `featured_until` timestamp NULL DEFAULT NULL,
+  `seo_title` varchar(255) DEFAULT NULL,
+  `seo_description` text DEFAULT NULL,
+  `seo_keywords` text DEFAULT NULL,
   `ekleme_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `guncelleme_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- --------------------------------------------------------
--- Video Beğeniler Tablosu
--- --------------------------------------------------------
-
-CREATE TABLE `video_begeniler` (
-  `id` int(11) NOT NULL,
-  `kullanici_id` int(11) NOT NULL,
-  `video_id` int(11) NOT NULL,
-  `tur` enum('begeni','begenme') NOT NULL,
-  `tarih` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- --------------------------------------------------------
--- Favoriler Tablosu
--- --------------------------------------------------------
-
-CREATE TABLE `favoriler` (
-  `id` int(11) NOT NULL,
-  `kullanici_id` int(11) NOT NULL,
-  `video_id` int(11) NOT NULL,
-  `ekleme_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- --------------------------------------------------------
--- İzleme Geçmişi Tablosu
--- --------------------------------------------------------
-
-CREATE TABLE `izleme_gecmisi` (
-  `id` int(11) NOT NULL,
-  `kullanici_id` int(11) NOT NULL,
-  `video_id` int(11) NOT NULL,
-  `izleme_suresi` time DEFAULT NULL,
-  `izleme_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- --------------------------------------------------------
--- Video Şikayetler Tablosu
--- --------------------------------------------------------
-
-CREATE TABLE `video_sikayetler` (
-  `id` int(11) NOT NULL,
-  `kullanici_id` int(11) NOT NULL,
-  `video_id` int(11) NOT NULL,
-  `sikayet_sebebi` text NOT NULL,
-  `durum` enum('beklemede','inceleniyor','kabul_edildi','reddedildi') NOT NULL DEFAULT 'beklemede',
-  `admin_notu` text,
-  `ip_adresi` varchar(45) DEFAULT NULL,
-  `user_agent` text,
-  `sikayet_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `islem_tarihi` timestamp NULL DEFAULT NULL
+  `guncelleme_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `yayin_tarihi` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `slug` (`slug`),
+  KEY `kategori_id` (`kategori_id`),
+  KEY `uploader_id` (`uploader_id`),
+  KEY `durum` (`durum`),
+  KEY `goruntulenme_yetkisi` (`goruntulenme_yetkisi`),
+  KEY `ozellik` (`ozellik`),
+  KEY `izlenme_sayisi` (`izlenme_sayisi`),
+  KEY `ekleme_tarihi` (`ekleme_tarihi`),
+  CONSTRAINT `videolar_ibfk_1` FOREIGN KEY (`kategori_id`) REFERENCES `kategoriler` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `videolar_ibfk_2` FOREIGN KEY (`uploader_id`) REFERENCES `kullanicilar` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -208,77 +216,26 @@ CREATE TABLE `video_sikayetler` (
 -- --------------------------------------------------------
 
 CREATE TABLE `slider` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `baslik` varchar(255) NOT NULL,
   `aciklama` text,
   `resim` varchar(255) NOT NULL,
+  `mobil_resim` varchar(255) DEFAULT NULL,
   `link` varchar(255) DEFAULT NULL,
-  `buton_metni` varchar(50) DEFAULT NULL,
-  `siralama` int(11) NOT NULL DEFAULT '0',
-  `durum` enum('aktif','pasif') NOT NULL DEFAULT 'aktif',
+  `buton_metni` varchar(100) DEFAULT 'İzle',
+  `video_id` int(11) DEFAULT NULL,
+  `siralama` int(11) DEFAULT '0',
+  `durum` enum('aktif','pasif') DEFAULT 'aktif',
+  `baslangic_tarihi` timestamp NULL DEFAULT NULL,
+  `bitis_tarihi` timestamp NULL DEFAULT NULL,
+  `click_sayisi` int(11) DEFAULT '0',
   `olusturma_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `guncelleme_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- --------------------------------------------------------
--- Menü Tablosu
--- --------------------------------------------------------
-
-CREATE TABLE `menu` (
-  `id` int(11) NOT NULL,
-  `menu_adi` varchar(100) NOT NULL,
-  `link` varchar(255) NOT NULL,
-  `ust_menu_id` int(11) DEFAULT NULL,
-  `siralama` int(11) NOT NULL DEFAULT '0',
-  `durum` enum('aktif','pasif') NOT NULL DEFAULT 'aktif',
-  `olusturma_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-INSERT INTO `menu` (`menu_adi`, `link`, `siralama`) VALUES
-('Ana Sayfa', '/', 1),
-('Videolar', '/videolar.php', 2),
-('Kategoriler', '/kategoriler.php', 3),
-('Popüler', '/populer.php', 4),
-('VIP', '/vip.php', 5),
-('Premium', '/premium.php', 6),
-('İletişim', '/iletisim.php', 7);
-
--- --------------------------------------------------------
--- Sayfalar Tablosu
--- --------------------------------------------------------
-
-CREATE TABLE `sayfalar` (
-  `id` int(11) NOT NULL,
-  `sayfa_adi` varchar(100) NOT NULL,
-  `slug` varchar(100) NOT NULL,
-  `icerik` longtext,
-  `meta_baslik` varchar(255) DEFAULT NULL,
-  `meta_aciklama` text,
-  `meta_anahtar_kelimeler` text,
-  `durum` enum('aktif','pasif') NOT NULL DEFAULT 'aktif',
-  `olusturma_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `guncelleme_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-INSERT INTO `sayfalar` (`sayfa_adi`, `slug`, `icerik`, `meta_baslik`, `meta_aciklama`) VALUES
-('Hakkımızda', 'hakkimizda', '<h1>DOBİEN Video Platform Hakkında</h1><p>DOBİEN Video Platform, kullanıcılarına en kaliteli video deneyimini sunmak için geliştirilmiş modern bir video paylaşım platformudur.</p>', 'Hakkımızda - DOBİEN', 'DOBİEN Video Platform hakkında bilgi edinin'),
-('Kullanım Şartları', 'kullanim-sartlari', '<h1>Kullanım Şartları</h1><p>Bu platformu kullanarak aşağıdaki şartları kabul etmiş sayılırsınız...</p>', 'Kullanım Şartları', 'Platform kullanım şartları ve kuralları'),
-('Gizlilik Politikası', 'gizlilik-politikasi', '<h1>Gizlilik Politikası</h1><p>Kişisel verilerinizin güvenliği bizim için önemlidir...</p>', 'Gizlilik Politikası', 'Kişisel verilerin korunması ve gizlilik politikası'),
-('İletişim', 'iletisim', '<h1>İletişim</h1><p>Bizimle iletişime geçin:</p><p>E-posta: info@dobien.com</p>', 'İletişim', 'DOBİEN ile iletişime geçin');
-
--- --------------------------------------------------------
--- Admin Bildirimler Tablosu
--- --------------------------------------------------------
-
-CREATE TABLE `admin_bildirimler` (
-  `id` int(11) NOT NULL,
-  `tip` enum('bilgi','uyari','hata','basari','sikayet') NOT NULL DEFAULT 'bilgi',
-  `baslik` varchar(255) NOT NULL,
-  `mesaj` text NOT NULL,
-  `link` varchar(255) DEFAULT NULL,
-  `durum` enum('okunmamis','okunmus') NOT NULL DEFAULT 'okunmamis',
-  `olusturma_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `okunma_tarihi` timestamp NULL DEFAULT NULL
+  `guncelleme_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `video_id` (`video_id`),
+  KEY `durum` (`durum`),
+  KEY `siralama` (`siralama`),
+  CONSTRAINT `slider_ibfk_1` FOREIGN KEY (`video_id`) REFERENCES `videolar` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -286,253 +243,152 @@ CREATE TABLE `admin_bildirimler` (
 -- --------------------------------------------------------
 
 CREATE TABLE `odeme_gecmisi` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `kullanici_id` int(11) NOT NULL,
-  `odeme_turu` enum('uyelik_yukseltme','yenileme') NOT NULL,
-  `eski_uyelik` enum('kullanici','vip','premium') NOT NULL,
-  `yeni_uyelik` enum('vip','premium') NOT NULL,
+  `plan` enum('vip','premium') NOT NULL,
+  `donem` enum('monthly','yearly') NOT NULL DEFAULT 'monthly',
   `tutar` decimal(10,2) NOT NULL,
-  `para_birimi` varchar(3) NOT NULL DEFAULT 'TRY',
-  `odeme_yontemi` varchar(50) DEFAULT NULL,
-  `islem_no` varchar(100) DEFAULT NULL,
-  `durum` enum('beklemede','tamamlandi','iptal_edildi','hata') NOT NULL DEFAULT 'beklemede',
+  `para_birimi` varchar(3) DEFAULT 'TRY',
+  `odeme_yontemi` enum('kredi_karti','banka_havalesi','paypal','bitcoin') DEFAULT 'kredi_karti',
+  `transaction_id` varchar(100) DEFAULT NULL,
+  `gateway_response` text,
+  `durum` enum('beklemede','tamamlandi','iptal','geri_iade') NOT NULL DEFAULT 'beklemede',
+  `baslangic_tarihi` timestamp NULL DEFAULT NULL,
+  `bitis_tarihi` timestamp NULL DEFAULT NULL,
   `odeme_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `onay_tarihi` timestamp NULL DEFAULT NULL
+  `guncelleme_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `kullanici_id` (`kullanici_id`),
+  KEY `durum` (`durum`),
+  KEY `odeme_tarihi` (`odeme_tarihi`),
+  CONSTRAINT `odeme_gecmisi_ibfk_1` FOREIGN KEY (`kullanici_id`) REFERENCES `kullanicilar` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
--- E-posta Şablonları Tablosu
+-- Kullanıcı Video Etkileşimleri
 -- --------------------------------------------------------
 
-CREATE TABLE `email_sablonlari` (
-  `id` int(11) NOT NULL,
-  `sablon_adi` varchar(100) NOT NULL,
-  `konu` varchar(255) NOT NULL,
-  `icerik` longtext NOT NULL,
-  `degiskenler` text,
-  `durum` enum('aktif','pasif') NOT NULL DEFAULT 'aktif',
+CREATE TABLE `kullanici_video_etkilesimleri` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `kullanici_id` int(11) NOT NULL,
+  `video_id` int(11) NOT NULL,
+  `etkilesim_tipi` enum('izleme','begeni','begenme','favori','paylaşım') NOT NULL,
+  `etkilesim_suresi` int(11) DEFAULT NULL COMMENT 'İzleme süresi saniye',
+  `cihaz_tipi` enum('desktop','mobile','tablet','tv') DEFAULT 'desktop',
+  `ip_adresi` varchar(45) DEFAULT NULL,
   `olusturma_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `guncelleme_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_interaction` (`kullanici_id`,`video_id`,`etkilesim_tipi`),
+  KEY `video_id` (`video_id`),
+  KEY `etkilesim_tipi` (`etkilesim_tipi`),
+  CONSTRAINT `kullanici_video_etkilesimleri_ibfk_1` FOREIGN KEY (`kullanici_id`) REFERENCES `kullanicilar` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `kullanici_video_etkilesimleri_ibfk_2` FOREIGN KEY (`video_id`) REFERENCES `videolar` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO `email_sablonlari` (`sablon_adi`, `konu`, `icerik`, `degiskenler`) VALUES
-('hesap_aktivasyon', 'Hesap Aktivasyonu - DOBİEN', '<h1>Hoş Geldiniz!</h1><p>Hesabınızı aktive etmek için <a href="{aktivasyon_link}">buraya tıklayın</a>.</p>', '{ad_soyad}, {aktivasyon_link}'),
-('sifre_sifirlama', 'Şifre Sıfırlama - DOBİEN', '<h1>Şifre Sıfırlama</h1><p>Şifrenizi sıfırlamak için <a href="{sifirlama_link}">buraya tıklayın</a>.</p>', '{ad_soyad}, {sifirlama_link}'),
-('uyelik_yukseltme', 'Üyelik Yükseltme Onayı - DOBİEN', '<h1>Üyelik Yükseltme</h1><p>Üyeliğiniz başarıyla {yeni_uyelik} olarak yükseltildi.</p>', '{ad_soyad}, {yeni_uyelik}');
+-- --------------------------------------------------------
+-- Video Yorumları
+-- --------------------------------------------------------
+
+CREATE TABLE `video_yorumlari` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `video_id` int(11) NOT NULL,
+  `kullanici_id` int(11) NOT NULL,
+  `parent_id` int(11) DEFAULT NULL COMMENT 'Yanıt için üst yorum ID',
+  `yorum_metni` text NOT NULL,
+  `begeni_sayisi` int(11) DEFAULT '0',
+  `begenme_sayisi` int(11) DEFAULT '0',
+  `durum` enum('aktif','pasif','beklemede','silinmis') DEFAULT 'aktif',
+  `moderasyon_notu` text,
+  `ip_adresi` varchar(45) DEFAULT NULL,
+  `olusturma_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `guncelleme_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `video_id` (`video_id`),
+  KEY `kullanici_id` (`kullanici_id`),
+  KEY `parent_id` (`parent_id`),
+  KEY `durum` (`durum`),
+  CONSTRAINT `video_yorumlari_ibfk_1` FOREIGN KEY (`video_id`) REFERENCES `videolar` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `video_yorumlari_ibfk_2` FOREIGN KEY (`kullanici_id`) REFERENCES `kullanicilar` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `video_yorumlari_ibfk_3` FOREIGN KEY (`parent_id`) REFERENCES `video_yorumlari` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
 -- İstatistikler Tablosu
 -- --------------------------------------------------------
 
 CREATE TABLE `istatistikler` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `tarih` date NOT NULL,
-  `toplam_kullanici` int(11) NOT NULL DEFAULT '0',
-  `aktif_kullanici` int(11) NOT NULL DEFAULT '0',
-  `yeni_kullanici` int(11) NOT NULL DEFAULT '0',
-  `toplam_video` int(11) NOT NULL DEFAULT '0',
-  `yeni_video` int(11) NOT NULL DEFAULT '0',
-  `toplam_izlenme` bigint(20) NOT NULL DEFAULT '0',
-  `gunluk_izlenme` bigint(20) NOT NULL DEFAULT '0',
-  `vip_kullanici` int(11) NOT NULL DEFAULT '0',
-  `premium_kullanici` int(11) NOT NULL DEFAULT '0',
-  `gunluk_gelir` decimal(10,2) NOT NULL DEFAULT '0.00',
-  `olusturma_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+  `toplam_izlenme` bigint(20) DEFAULT '0',
+  `toplam_kullanici` int(11) DEFAULT '0',
+  `yeni_kayitlar` int(11) DEFAULT '0',
+  `premium_satislari` decimal(10,2) DEFAULT '0.00',
+  `vip_satislari` decimal(10,2) DEFAULT '0.00',
+  `aktif_kullanicilar` int(11) DEFAULT '0',
+  `video_yuklemeleri` int(11) DEFAULT '0',
+  `toplam_yorum` int(11) DEFAULT '0',
+  `olusturma_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `tarih` (`tarih`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
--- Log Tablosu
+-- Sistem Logları
 -- --------------------------------------------------------
 
 CREATE TABLE `sistem_loglari` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `kullanici_id` int(11) DEFAULT NULL,
-  `kullanici_tipi` enum('admin','kullanici','misafir') NOT NULL DEFAULT 'misafir',
-  `islem` varchar(100) NOT NULL,
-  `detaylar` text,
+  `admin_id` int(11) DEFAULT NULL,
+  `aksiyon` varchar(100) NOT NULL,
+  `tablo_adi` varchar(50) DEFAULT NULL,
+  `kayit_id` int(11) DEFAULT NULL,
+  `eski_deger` text,
+  `yeni_deger` text,
   `ip_adresi` varchar(45) DEFAULT NULL,
   `user_agent` text,
-  `tarih` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+  `olusturma_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `kullanici_id` (`kullanici_id`),
+  KEY `admin_id` (`admin_id`),
+  KEY `aksiyon` (`aksiyon`),
+  KEY `olusturma_tarihi` (`olusturma_tarihi`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
--- İndeksler ve Primary Key'ler
+-- Bildirimler Tablosu  
 -- --------------------------------------------------------
 
-ALTER TABLE `site_ayarlari`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `anahtar` (`anahtar`);
-
-ALTER TABLE `kullanicilar`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `email` (`email`),
-  ADD KEY `uyelik_tipi` (`uyelik_tipi`),
-  ADD KEY `durum` (`durum`);
-
-ALTER TABLE `admin_kullanicilar`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `email` (`email`);
-
-ALTER TABLE `kategoriler`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `slug` (`slug`),
-  ADD KEY `durum` (`durum`);
-
-ALTER TABLE `videolar`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `slug` (`slug`),
-  ADD KEY `kategori_id` (`kategori_id`),
-  ADD KEY `goruntulenme_yetkisi` (`goruntulenme_yetkisi`),
-  ADD KEY `durum` (`durum`),
-  ADD KEY `ozellik` (`ozellik`);
-
-ALTER TABLE `video_begeniler`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `kullanici_video` (`kullanici_id`,`video_id`),
-  ADD KEY `video_id` (`video_id`);
-
-ALTER TABLE `favoriler`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `kullanici_video` (`kullanici_id`,`video_id`),
-  ADD KEY `video_id` (`video_id`);
-
-ALTER TABLE `izleme_gecmisi`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `kullanici_id` (`kullanici_id`),
-  ADD KEY `video_id` (`video_id`);
-
-ALTER TABLE `video_sikayetler`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `kullanici_id` (`kullanici_id`),
-  ADD KEY `video_id` (`video_id`),
-  ADD KEY `durum` (`durum`);
-
-ALTER TABLE `slider`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `durum` (`durum`);
-
-ALTER TABLE `menu`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `ust_menu_id` (`ust_menu_id`),
-  ADD KEY `durum` (`durum`);
-
-ALTER TABLE `sayfalar`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `slug` (`slug`),
-  ADD KEY `durum` (`durum`);
-
-ALTER TABLE `admin_bildirimler`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `durum` (`durum`),
-  ADD KEY `tip` (`tip`);
-
-ALTER TABLE `odeme_gecmisi`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `kullanici_id` (`kullanici_id`),
-  ADD KEY `durum` (`durum`);
-
-ALTER TABLE `email_sablonlari`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `sablon_adi` (`sablon_adi`);
-
-ALTER TABLE `istatistikler`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `tarih` (`tarih`);
-
-ALTER TABLE `sistem_loglari`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `kullanici_id` (`kullanici_id`),
-  ADD KEY `kullanici_tipi` (`kullanici_tipi`);
+CREATE TABLE `bildirimler` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `kullanici_id` int(11) NOT NULL,
+  `baslik` varchar(255) NOT NULL,
+  `mesaj` text NOT NULL,
+  `tip` enum('info','success','warning','error') DEFAULT 'info',
+  `url` varchar(500) DEFAULT NULL,
+  `okundu` tinyint(1) DEFAULT '0',
+  `olusturma_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `kullanici_id` (`kullanici_id`),
+  KEY `okundu` (`okundu`),
+  CONSTRAINT `bildirimler_ibfk_1` FOREIGN KEY (`kullanici_id`) REFERENCES `kullanicilar` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
--- AUTO_INCREMENT Değerleri
+-- AUTO_INCREMENT değerleri
 -- --------------------------------------------------------
 
-ALTER TABLE `site_ayarlari`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
-ALTER TABLE `kullanicilar`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
-ALTER TABLE `admin_kullanicilar`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
-ALTER TABLE `kategoriler`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
-ALTER TABLE `videolar`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
-ALTER TABLE `video_begeniler`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
-ALTER TABLE `favoriler`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
-ALTER TABLE `izleme_gecmisi`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
-ALTER TABLE `video_sikayetler`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
-ALTER TABLE `slider`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
-ALTER TABLE `menu`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
-ALTER TABLE `sayfalar`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
-ALTER TABLE `admin_bildirimler`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
-ALTER TABLE `odeme_gecmisi`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
-ALTER TABLE `email_sablonlari`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
-ALTER TABLE `istatistikler`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
-ALTER TABLE `sistem_loglari`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
--- --------------------------------------------------------
--- Foreign Key Constraints
--- --------------------------------------------------------
-
-ALTER TABLE `videolar`
-  ADD CONSTRAINT `videolar_ibfk_1` FOREIGN KEY (`kategori_id`) REFERENCES `kategoriler` (`id`) ON DELETE SET NULL;
-
-ALTER TABLE `video_begeniler`
-  ADD CONSTRAINT `video_begeniler_ibfk_1` FOREIGN KEY (`kullanici_id`) REFERENCES `kullanicilar` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `video_begeniler_ibfk_2` FOREIGN KEY (`video_id`) REFERENCES `videolar` (`id`) ON DELETE CASCADE;
-
-ALTER TABLE `favoriler`
-  ADD CONSTRAINT `favoriler_ibfk_1` FOREIGN KEY (`kullanici_id`) REFERENCES `kullanicilar` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `favoriler_ibfk_2` FOREIGN KEY (`video_id`) REFERENCES `videolar` (`id`) ON DELETE CASCADE;
-
-ALTER TABLE `izleme_gecmisi`
-  ADD CONSTRAINT `izleme_gecmisi_ibfk_1` FOREIGN KEY (`kullanici_id`) REFERENCES `kullanicilar` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `izleme_gecmisi_ibfk_2` FOREIGN KEY (`video_id`) REFERENCES `videolar` (`id`) ON DELETE CASCADE;
-
-ALTER TABLE `video_sikayetler`
-  ADD CONSTRAINT `video_sikayetler_ibfk_1` FOREIGN KEY (`kullanici_id`) REFERENCES `kullanicilar` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `video_sikayetler_ibfk_2` FOREIGN KEY (`video_id`) REFERENCES `videolar` (`id`) ON DELETE CASCADE;
-
-ALTER TABLE `menu`
-  ADD CONSTRAINT `menu_ibfk_1` FOREIGN KEY (`ust_menu_id`) REFERENCES `menu` (`id`) ON DELETE CASCADE;
-
-ALTER TABLE `odeme_gecmisi`
-  ADD CONSTRAINT `odeme_gecmisi_ibfk_1` FOREIGN KEY (`kullanici_id`) REFERENCES `kullanicilar` (`id`) ON DELETE CASCADE;
+ALTER TABLE `admin_kullanicilar` AUTO_INCREMENT=2;
+ALTER TABLE `site_ayarlari` AUTO_INCREMENT=21;
+ALTER TABLE `kullanicilar` AUTO_INCREMENT=1;
+ALTER TABLE `kategoriler` AUTO_INCREMENT=7;
+ALTER TABLE `videolar` AUTO_INCREMENT=1;
+ALTER TABLE `slider` AUTO_INCREMENT=1;
+ALTER TABLE `odeme_gecmisi` AUTO_INCREMENT=1;
+ALTER TABLE `kullanici_video_etkilesimleri` AUTO_INCREMENT=1;
+ALTER TABLE `video_yorumlari` AUTO_INCREMENT=1;
+ALTER TABLE `istatistikler` AUTO_INCREMENT=1;
+ALTER TABLE `sistem_loglari` AUTO_INCREMENT=1;
+ALTER TABLE `bildirimler` AUTO_INCREMENT=1;
 
 COMMIT;
-
--- --------------------------------------------------------
--- Son Not: DOBİEN Video Platform
--- Bu veritabanı yapısı DOBİEN tarafından geliştirilmiştir.
--- Modern video paylaşım platformu için optimize edilmiştir.
--- Tüm hakları saklıdır © DOBİEN
--- --------------------------------------------------------
