@@ -157,6 +157,8 @@ function isAdmin() {
 function checkAdminSession() {
     if (isset($_SESSION['admin_id'])) {
         global $pdo;
+        
+        // Önce yeni tablo yapısını dene (admin_kullanicilar)
         try {
             $stmt = $pdo->prepare("SELECT * FROM admin_kullanicilar WHERE id = ? AND durum = 'aktif'");
             $stmt->execute([$_SESSION['admin_id']]);
@@ -169,17 +171,52 @@ function checkAdminSession() {
             
             return $admin;
         } catch (PDOException $e) {
-            // Eski tablo adını dene
+            // Yeni tablo bulunamadı, eski tabloyu dene (adminler)
             try {
                 $stmt = $pdo->prepare("SELECT * FROM adminler WHERE id = ? AND durum = 'aktif'");
                 $stmt->execute([$_SESSION['admin_id']]);
-                return $stmt->fetch();
+                $admin = $stmt->fetch();
+                
+                if (!$admin) {
+                    session_destroy();
+                    return false;
+                }
+                
+                return $admin;
             } catch (PDOException $e2) {
+                // Hiçbir admin tablosu bulunamadı
+                session_destroy();
                 return false;
             }
         }
     }
     return false;
+}
+
+// Tablo varlık kontrolü
+function checkTableExists($table_name) {
+    global $pdo;
+    try {
+        $stmt = $pdo->prepare("SHOW TABLES LIKE ?");
+        $stmt->execute([$table_name]);
+        return $stmt->fetch() !== false;
+    } catch (PDOException $e) {
+        return false;
+    }
+}
+
+// Admin paneli için tablo varlık kontrolü
+function checkAdminTables() {
+    $required_tables = ['admin_kullanicilar', 'site_ayarlari', 'kullanicilar', 'kategoriler', 'videolar'];
+    $missing_tables = [];
+    
+    foreach ($required_tables as $table) {
+        if (!checkTableExists($table)) {
+            $missing_tables[] = $table;
+        }
+    }
+    
+    return empty($missing_tables) ? true : $missing_tables;
 }
 
 // CSRF token oluştur

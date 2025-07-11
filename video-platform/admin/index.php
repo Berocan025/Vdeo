@@ -23,11 +23,40 @@ if (!isset($_SESSION['admin_id']) || $_SESSION['admin_logged_in'] !== true) {
     exit;
 }
 
-// Admin bilgilerini al
-$admin_query = "SELECT * FROM adminler WHERE id = ?";
-$admin_stmt = $pdo->prepare($admin_query);
-$admin_stmt->execute([$_SESSION['admin_id']]);
-$admin_user = $admin_stmt->fetch();
+// Tablo varlık kontrolü
+$missing_tables = checkAdminTables();
+if ($missing_tables !== true) {
+    die('
+    <div style="font-family: Arial; background: #1a1f2e; color: #fff; padding: 50px; text-align: center;">
+        <h2>⚠️ Veritabanı Hatası</h2>
+        <p>Gerekli tablolar eksik: <strong>' . implode(', ', $missing_tables) . '</strong></p>
+        <p><a href="../install.php" style="color: #ff6b35;">Kurulumu Tekrar Çalıştırın</a></p>
+    </div>
+    ');
+}
+
+// Admin bilgilerini al - hem yeni hem eski tablo yapısını destekle
+$admin_user = false;
+
+try {
+    // Önce yeni tablo yapısını dene (admin_kullanicilar)
+    $admin_query = "SELECT * FROM admin_kullanicilar WHERE id = ?";
+    $admin_stmt = $pdo->prepare($admin_query);
+    $admin_stmt->execute([$_SESSION['admin_id']]);
+    $admin_user = $admin_stmt->fetch();
+} catch (PDOException $e) {
+    // Yeni tablo bulunamadı, eski tabloyu dene (adminler)
+    try {
+        $admin_query = "SELECT * FROM adminler WHERE id = ?";
+        $admin_stmt = $pdo->prepare($admin_query);
+        $admin_stmt->execute([$_SESSION['admin_id']]);
+        $admin_user = $admin_stmt->fetch();
+    } catch (PDOException $e2) {
+        session_destroy();
+        header('Location: giris.php');
+        exit;
+    }
+}
 
 if (!$admin_user || $admin_user['durum'] !== 'aktif') {
     session_destroy();
@@ -35,49 +64,84 @@ if (!$admin_user || $admin_user['durum'] !== 'aktif') {
     exit;
 }
 
-// İstatistikler
+// İstatistikler - hata kontrolü ile
 $stats = [];
 
 // Kullanıcı istatistikleri
-$stats['kullanicilar'] = [
-    'toplam' => $pdo->query("SELECT COUNT(*) FROM kullanicilar")->fetchColumn(),
-    'aktif' => $pdo->query("SELECT COUNT(*) FROM kullanicilar WHERE durum = 'aktif'")->fetchColumn(),
-    'premium' => $pdo->query("SELECT COUNT(*) FROM kullanicilar WHERE uyelik_tipi = 'premium'")->fetchColumn(),
-    'vip' => $pdo->query("SELECT COUNT(*) FROM kullanicilar WHERE uyelik_tipi = 'vip'")->fetchColumn(),
-    'bugun' => $pdo->query("SELECT COUNT(*) FROM kullanicilar WHERE DATE(kayit_tarihi) = CURDATE()")->fetchColumn()
-];
+try {
+    $stats['kullanicilar'] = [
+        'toplam' => $pdo->query("SELECT COUNT(*) FROM kullanicilar")->fetchColumn() ?: 0,
+        'aktif' => $pdo->query("SELECT COUNT(*) FROM kullanicilar WHERE durum = 'aktif'")->fetchColumn() ?: 0,
+        'premium' => $pdo->query("SELECT COUNT(*) FROM kullanicilar WHERE uyelik_tipi = 'premium'")->fetchColumn() ?: 0,
+        'vip' => $pdo->query("SELECT COUNT(*) FROM kullanicilar WHERE uyelik_tipi = 'vip'")->fetchColumn() ?: 0,
+        'bugun' => $pdo->query("SELECT COUNT(*) FROM kullanicilar WHERE DATE(kayit_tarihi) = CURDATE()")->fetchColumn() ?: 0
+    ];
+} catch (PDOException $e) {
+    $stats['kullanicilar'] = ['toplam' => 0, 'aktif' => 0, 'premium' => 0, 'vip' => 0, 'bugun' => 0];
+}
 
 // Video istatistikleri
-$stats['videolar'] = [
-    'toplam' => $pdo->query("SELECT COUNT(*) FROM videolar")->fetchColumn(),
-    'aktif' => $pdo->query("SELECT COUNT(*) FROM videolar WHERE durum = 'aktif'")->fetchColumn(),
-    'beklemede' => $pdo->query("SELECT COUNT(*) FROM videolar WHERE durum = 'beklemede'")->fetchColumn(),
-    'premium' => $pdo->query("SELECT COUNT(*) FROM videolar WHERE goruntulenme_yetkisi = 'premium'")->fetchColumn(),
-    'bugun' => $pdo->query("SELECT COUNT(*) FROM videolar WHERE DATE(ekleme_tarihi) = CURDATE()")->fetchColumn()
-];
+try {
+    $stats['videolar'] = [
+        'toplam' => $pdo->query("SELECT COUNT(*) FROM videolar")->fetchColumn() ?: 0,
+        'aktif' => $pdo->query("SELECT COUNT(*) FROM videolar WHERE durum = 'aktif'")->fetchColumn() ?: 0,
+        'beklemede' => $pdo->query("SELECT COUNT(*) FROM videolar WHERE durum = 'beklemede'")->fetchColumn() ?: 0,
+        'premium' => $pdo->query("SELECT COUNT(*) FROM videolar WHERE goruntulenme_yetkisi = 'premium'")->fetchColumn() ?: 0,
+        'bugun' => $pdo->query("SELECT COUNT(*) FROM videolar WHERE DATE(ekleme_tarihi) = CURDATE()")->fetchColumn() ?: 0
+    ];
+} catch (PDOException $e) {
+    $stats['videolar'] = ['toplam' => 0, 'aktif' => 0, 'beklemede' => 0, 'premium' => 0, 'bugun' => 0];
+}
 
 // Kategori istatistikleri
-$stats['kategoriler'] = [
-    'toplam' => $pdo->query("SELECT COUNT(*) FROM kategoriler")->fetchColumn(),
-    'aktif' => $pdo->query("SELECT COUNT(*) FROM kategoriler WHERE durum = 'aktif'")->fetchColumn()
-];
+try {
+    $stats['kategoriler'] = [
+        'toplam' => $pdo->query("SELECT COUNT(*) FROM kategoriler")->fetchColumn() ?: 0,
+        'aktif' => $pdo->query("SELECT COUNT(*) FROM kategoriler WHERE durum = 'aktif'")->fetchColumn() ?: 0
+    ];
+} catch (PDOException $e) {
+    $stats['kategoriler'] = ['toplam' => 0, 'aktif' => 0];
+}
 
 // Satın alma istatistikleri
-$stats['satin_almalar'] = [
-    'toplam' => $pdo->query("SELECT COUNT(*) FROM satin_almalar")->fetchColumn(),
-    'onaylanan' => $pdo->query("SELECT COUNT(*) FROM satin_almalar WHERE durum = 'onaylandi'")->fetchColumn(),
-    'bekleyen' => $pdo->query("SELECT COUNT(*) FROM satin_almalar WHERE durum = 'beklemede'")->fetchColumn(),
-    'bugun' => $pdo->query("SELECT COUNT(*) FROM satin_almalar WHERE DATE(satin_alma_tarihi) = CURDATE()")->fetchColumn()
-];
+try {
+    $stats['satin_almalar'] = [
+        'toplam' => $pdo->query("SELECT COUNT(*) FROM odeme_gecmisi")->fetchColumn() ?: 0,
+        'onaylanan' => $pdo->query("SELECT COUNT(*) FROM odeme_gecmisi WHERE durum = 'tamamlandi'")->fetchColumn() ?: 0,
+        'bekleyen' => $pdo->query("SELECT COUNT(*) FROM odeme_gecmisi WHERE durum = 'beklemede'")->fetchColumn() ?: 0,
+        'bugun' => $pdo->query("SELECT COUNT(*) FROM odeme_gecmisi WHERE DATE(odeme_tarihi) = CURDATE()")->fetchColumn() ?: 0
+    ];
+} catch (PDOException $e) {
+    $stats['satin_almalar'] = ['toplam' => 0, 'onaylanan' => 0, 'bekleyen' => 0, 'bugun' => 0];
+}
 
 // Toplam gelir
-$toplam_gelir = $pdo->query("SELECT SUM(tutar) FROM satin_almalar WHERE durum = 'onaylandi'")->fetchColumn() ?: 0;
-$aylik_gelir = $pdo->query("SELECT SUM(tutar) FROM satin_almalar WHERE durum = 'onaylandi' AND MONTH(satin_alma_tarihi) = MONTH(CURDATE()) AND YEAR(satin_alma_tarihi) = YEAR(CURDATE())")->fetchColumn() ?: 0;
+try {
+    $toplam_gelir = $pdo->query("SELECT SUM(tutar) FROM odeme_gecmisi WHERE durum = 'tamamlandi'")->fetchColumn() ?: 0;
+    $aylik_gelir = $pdo->query("SELECT SUM(tutar) FROM odeme_gecmisi WHERE durum = 'tamamlandi' AND MONTH(odeme_tarihi) = MONTH(CURDATE()) AND YEAR(odeme_tarihi) = YEAR(CURDATE())")->fetchColumn() ?: 0;
+} catch (PDOException $e) {
+    $toplam_gelir = 0;
+    $aylik_gelir = 0;
+}
 
 // Son aktiviteler
-$son_kullanicilar = $pdo->query("SELECT * FROM kullanicilar ORDER BY kayit_tarihi DESC LIMIT 5")->fetchAll();
-$son_videolar = $pdo->query("SELECT * FROM videolar ORDER BY ekleme_tarihi DESC LIMIT 5")->fetchAll();
-$son_satislar = $pdo->query("SELECT sa.*, k.kullanici_adi FROM satin_almalar sa LEFT JOIN kullanicilar k ON sa.kullanici_id = k.id ORDER BY sa.satin_alma_tarihi DESC LIMIT 5")->fetchAll();
+try {
+    $son_kullanicilar = $pdo->query("SELECT * FROM kullanicilar ORDER BY kayit_tarihi DESC LIMIT 5")->fetchAll() ?: [];
+} catch (PDOException $e) {
+    $son_kullanicilar = [];
+}
+
+try {
+    $son_videolar = $pdo->query("SELECT * FROM videolar ORDER BY ekleme_tarihi DESC LIMIT 5")->fetchAll() ?: [];
+} catch (PDOException $e) {
+    $son_videolar = [];
+}
+
+try {
+    $son_satislar = $pdo->query("SELECT og.*, k.ad, k.soyad FROM odeme_gecmisi og LEFT JOIN kullanicilar k ON og.kullanici_id = k.id ORDER BY og.odeme_tarihi DESC LIMIT 5")->fetchAll() ?: [];
+} catch (PDOException $e) {
+    $son_satislar = [];
+}
 
 // Sistem bilgileri
 $sistem_bilgileri = [
@@ -264,7 +328,7 @@ $page_title = "Admin Panel - Ana Sayfa";
                 <div class="topbar-item dropdown">
                     <button class="admin-profile-toggle">
                         <img src="<?php echo $admin_user['avatar'] ?? '../assets/images/default-avatar.png'; ?>" alt="Admin" class="admin-avatar">
-                        <span class="admin-name"><?php echo safeOutput($admin_user['kullanici_adi']); ?></span>
+                        <span class="admin-name"><?php echo safeOutput($admin_user['ad'] . ' ' . $admin_user['soyad'] ?: $admin_user['kullanici_adi'] ?: $admin_user['email']); ?></span>
                         <i class="fas fa-chevron-down"></i>
                     </button>
                     <div class="dropdown-menu">
@@ -283,7 +347,7 @@ $page_title = "Admin Panel - Ana Sayfa";
             <!-- Welcome Section -->
             <div class="welcome-section">
                 <div class="welcome-content">
-                    <h2>Hoş Geldiniz, <?php echo safeOutput($admin_user['ad_soyad'] ?: $admin_user['kullanici_adi']); ?>!</h2>
+                    <h2>Hoş Geldiniz, <?php echo safeOutput(($admin_user['ad'] . ' ' . $admin_user['soyad']) ?: $admin_user['ad_soyad'] ?: $admin_user['kullanici_adi'] ?: $admin_user['email']); ?>!</h2>
                     <p>DOBİEN Video Platform Admin Paneline hoş geldiniz. Burada sitenizin her yönünü kontrol edebilirsiniz.</p>
                     <div class="quick-actions">
                         <a href="videolar.php" class="quick-action-btn">
@@ -458,10 +522,10 @@ $page_title = "Admin Panel - Ana Sayfa";
                             <?php foreach ($son_kullanicilar as $kullanici): ?>
                             <div class="activity-item">
                                 <div class="activity-avatar">
-                                    <img src="<?php echo $kullanici['avatar'] ? '../uploads/avatars/' . $kullanici['avatar'] : '../assets/images/default-avatar.png'; ?>" alt="<?php echo safeOutput($kullanici['kullanici_adi']); ?>">
+                                    <img src="<?php echo $kullanici['profil_resmi'] ? '../uploads/avatars/' . $kullanici['profil_resmi'] : '../assets/images/default-avatar.png'; ?>" alt="<?php echo safeOutput($kullanici['ad'] . ' ' . $kullanici['soyad']); ?>">
                                 </div>
                                 <div class="activity-content">
-                                    <div class="activity-title"><?php echo safeOutput($kullanici['kullanici_adi']); ?></div>
+                                    <div class="activity-title"><?php echo safeOutput($kullanici['ad'] . ' ' . $kullanici['soyad'] ?: $kullanici['email']); ?></div>
                                     <div class="activity-meta">
                                         <span class="membership-badge <?php echo $kullanici['uyelik_tipi']; ?>">
                                             <?php echo ucfirst($kullanici['uyelik_tipi']); ?>

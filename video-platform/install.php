@@ -29,19 +29,135 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $pdo->exec("USE `$veritabani_adi`");
 
         // Database.sql dosyasını çalıştır
-        $sql_content = file_get_contents('database.sql');
-        
-        // SQL'i ';' karakterine göre böl ve çalıştır
-        $statements = array_filter(explode(';', $sql_content));
-        
-        foreach ($statements as $statement) {
-            $statement = trim($statement);
-            if (!empty($statement) && !preg_match('/^(--|\#|\/\*)/', $statement)) {
-                try {
-                    $pdo->exec($statement);
-                } catch (PDOException $e) {
-                    // Hata olsa bile devam et
+        if (file_exists('database.sql')) {
+            $sql_content = file_get_contents('database.sql');
+            
+            // SQL'i ';' karakterine göre böl ve çalıştır
+            $statements = array_filter(array_map('trim', explode(';', $sql_content)));
+            
+            foreach ($statements as $statement) {
+                // Boş satırları, yorumları ve SET komutlarını atla
+                if (empty($statement) || 
+                    preg_match('/^(--|\#|\/\*|SET|START|COMMIT)/', $statement)) {
                     continue;
+                }
+                
+                try {
+                    $pdo->exec($statement . ';');
+                } catch (PDOException $e) {
+                    // Kritik olmayan hataları logla ama devam et
+                    error_log("SQL Error: " . $e->getMessage() . " - Statement: " . $statement);
+                    continue;
+                }
+            }
+        }
+        
+        // Manuel olarak temel tabloları oluştur (yedek plan)
+        $core_tables = "
+        CREATE TABLE IF NOT EXISTS `admin_kullanicilar` (
+            `id` int(11) NOT NULL AUTO_INCREMENT,
+            `ad` varchar(50) NOT NULL,
+            `soyad` varchar(50) NOT NULL,
+            `email` varchar(100) NOT NULL,
+            `sifre` varchar(255) NOT NULL,
+            `yetki_seviyesi` enum('super_admin','admin','moderator') NOT NULL DEFAULT 'admin',
+            `profil_resmi` varchar(255) DEFAULT NULL,
+            `durum` enum('aktif','pasif') NOT NULL DEFAULT 'aktif',
+            `son_giris_tarihi` timestamp NULL DEFAULT NULL,
+            `son_giris_ip` varchar(45) DEFAULT NULL,
+            `olusturma_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            `guncelleme_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (`id`),
+            UNIQUE KEY `email` (`email`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+        CREATE TABLE IF NOT EXISTS `site_ayarlari` (
+            `id` int(11) NOT NULL AUTO_INCREMENT,
+            `anahtar` varchar(100) NOT NULL,
+            `deger` text,
+            `aciklama` text,
+            `guncelleme_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (`id`),
+            UNIQUE KEY `anahtar` (`anahtar`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+        CREATE TABLE IF NOT EXISTS `kullanicilar` (
+            `id` int(11) NOT NULL AUTO_INCREMENT,
+            `ad` varchar(50) NOT NULL,
+            `soyad` varchar(50) NOT NULL,
+            `email` varchar(100) NOT NULL,
+            `sifre` varchar(255) NOT NULL,
+            `telefon` varchar(20) DEFAULT NULL,
+            `dogum_tarihi` date DEFAULT NULL,
+            `cinsiyet` enum('erkek','kadın','belirtmek_istemiyorum') DEFAULT NULL,
+            `profil_resmi` varchar(255) DEFAULT NULL,
+            `uyelik_tipi` enum('kullanici','vip','premium') NOT NULL DEFAULT 'kullanici',
+            `uyelik_baslangic` timestamp NULL DEFAULT NULL,
+            `uyelik_bitis` timestamp NULL DEFAULT NULL,
+            `durum` enum('aktif','pasif','beklemede','yasakli') NOT NULL DEFAULT 'beklemede',
+            `aktivasyon_kodu` varchar(100) DEFAULT NULL,
+            `remember_token` varchar(100) DEFAULT NULL,
+            `newsletter_izni` tinyint(1) NOT NULL DEFAULT '0',
+            `son_giris_tarihi` timestamp NULL DEFAULT NULL,
+            `son_giris_ip` varchar(45) DEFAULT NULL,
+            `kayit_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            `guncelleme_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (`id`),
+            UNIQUE KEY `email` (`email`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+        CREATE TABLE IF NOT EXISTS `kategoriler` (
+            `id` int(11) NOT NULL AUTO_INCREMENT,
+            `kategori_adi` varchar(100) NOT NULL,
+            `slug` varchar(100) NOT NULL,
+            `aciklama` text,
+            `resim` varchar(255) DEFAULT NULL,
+            `siralama` int(11) NOT NULL DEFAULT '0',
+            `durum` enum('aktif','pasif') NOT NULL DEFAULT 'aktif',
+            `olusturma_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            `guncelleme_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (`id`),
+            UNIQUE KEY `slug` (`slug`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+        CREATE TABLE IF NOT EXISTS `videolar` (
+            `id` int(11) NOT NULL AUTO_INCREMENT,
+            `baslik` varchar(255) NOT NULL,
+            `slug` varchar(255) NOT NULL,
+            `aciklama` text,
+            `kategori_id` int(11) DEFAULT NULL,
+            `kapak_resmi` varchar(255) DEFAULT NULL,
+            `video_dosyasi_720p` varchar(255) DEFAULT NULL,
+            `video_dosyasi_1080p` varchar(255) DEFAULT NULL,
+            `video_dosyasi_4k` varchar(255) DEFAULT NULL,
+            `sure` time DEFAULT NULL,
+            `dosya_boyutu` bigint(20) DEFAULT NULL,
+            `goruntulenme_yetkisi` enum('herkes','vip','premium') NOT NULL DEFAULT 'herkes',
+            `ozellik` enum('normal','populer','editor_secimi','yeni') DEFAULT 'normal',
+            `etiketler` text,
+            `izlenme_sayisi` bigint(20) NOT NULL DEFAULT '0',
+            `begeni_sayisi` bigint(20) NOT NULL DEFAULT '0',
+            `begenme_sayisi` bigint(20) NOT NULL DEFAULT '0',
+            `favori_sayisi` bigint(20) NOT NULL DEFAULT '0',
+            `sikayet_sayisi` int(11) NOT NULL DEFAULT '0',
+            `durum` enum('aktif','pasif','beklemede','silinmis') NOT NULL DEFAULT 'beklemede',
+            `ekleme_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            `guncelleme_tarihi` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (`id`),
+            UNIQUE KEY `slug` (`slug`),
+            KEY `kategori_id` (`kategori_id`),
+            FOREIGN KEY (`kategori_id`) REFERENCES `kategoriler` (`id`) ON DELETE SET NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        ";
+        
+        // Temel tabloları oluştur
+        $core_statements = array_filter(array_map('trim', explode(';', $core_tables)));
+        foreach ($core_statements as $statement) {
+            if (!empty($statement)) {
+                try {
+                    $pdo->exec($statement . ';');
+                } catch (PDOException $e) {
+                    error_log("Core table creation error: " . $e->getMessage());
                 }
             }
         }
@@ -49,14 +165,27 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         // Admin kullanıcı ekle
         $admin_sifre_hash = password_hash($admin_sifre, PASSWORD_DEFAULT);
         
-        // Admin tablosuna veri eklerken database.sql'deki tablo isimlerini kullan
+        // Admin tablosuna veri ekle
+        $admin_inserted = false;
+        
+        // Önce yeni tablo yapısını dene (admin_kullanicilar)
         try {
             $stmt = $pdo->prepare("INSERT INTO admin_kullanicilar (ad, soyad, email, sifre, yetki_seviyesi) VALUES (?, ?, ?, ?, 'super_admin')");
             $stmt->execute(['DOBİEN', 'Admin', $admin_email, $admin_sifre_hash]);
+            $admin_inserted = true;
         } catch (PDOException $e) {
-            // Eski tablo adını dene
-            $stmt = $pdo->prepare("INSERT INTO adminler (kullanici_adi, email, sifre, ad_soyad, yetki_seviyesi) VALUES (?, ?, ?, 'DOBİEN Admin', 'super_admin')");
-            $stmt->execute([$admin_kullanici, $admin_email, $admin_sifre_hash]);
+            // Yeni tablo yoksa eski tabloyu dene (adminler)
+            try {
+                $stmt = $pdo->prepare("INSERT INTO adminler (kullanici_adi, email, sifre, ad_soyad, yetki_seviyesi) VALUES (?, ?, ?, 'DOBİEN Admin', 'super_admin')");
+                $stmt->execute([$admin_kullanici, $admin_email, $admin_sifre_hash]);
+                $admin_inserted = true;
+            } catch (PDOException $e2) {
+                throw new Exception("Admin kullanıcı eklenemedi: " . $e2->getMessage());
+            }
+        }
+        
+        if (!$admin_inserted) {
+            throw new Exception("Admin kullanıcı eklenemedi.");
         }
 
         // Site ayarları ekle 

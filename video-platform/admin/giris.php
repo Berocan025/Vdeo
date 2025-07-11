@@ -27,16 +27,24 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $error_message = 'Kullanıcı adı ve şifre gereklidir.';
     } else {
         try {
-            // Admin kullanıcısını kontrol et - database.sql'deki tablo yapısı
+            // Admin kullanıcısını kontrol et - hem yeni hem eski tablo yapısını destekle
+            $admin = false;
+            
+            // Önce yeni tablo yapısını dene (admin_kullanicilar)
             try {
                 $stmt = $pdo->prepare("SELECT * FROM admin_kullanicilar WHERE email = ? AND durum = 'aktif'");
                 $stmt->execute([$kullanici_adi]);
                 $admin = $stmt->fetch();
             } catch (PDOException $e) {
-                // Eski tablo adını dene
-                $stmt = $pdo->prepare("SELECT * FROM adminler WHERE (kullanici_adi = ? OR email = ?) AND durum = 'aktif'");
-                $stmt->execute([$kullanici_adi, $kullanici_adi]);
-                $admin = $stmt->fetch();
+                // Yeni tablo bulunamadı, eski tabloyu dene (adminler)
+                try {
+                    $stmt = $pdo->prepare("SELECT * FROM adminler WHERE (kullanici_adi = ? OR email = ?) AND durum = 'aktif'");
+                    $stmt->execute([$kullanici_adi, $kullanici_adi]);
+                    $admin = $stmt->fetch();
+                } catch (PDOException $e2) {
+                    // Hiç admin tablosu yok, hata mesajı
+                    $error_message = 'Veritabanı yapısı eksik. Lütfen kurulumu tekrar çalıştırın.';
+                }
             }
             
             if ($admin && password_verify($sifre, $admin['sifre'])) {
